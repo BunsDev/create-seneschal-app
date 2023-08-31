@@ -97,8 +97,8 @@ export function SponsorForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className='font-bold'>Proposal Image</FormLabel>
-                <FormControl className='border rounded-lg'>
-                  <div class='grid grid-cols-2 gap-5 w-full'>
+                <FormControl className=''>
+                  <div className='grid grid-cols-2 gap-5 w-full'>
                     <label
                       for='dropzone-file'
                       class='flex flex-col items-center justify-center h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600'
@@ -137,7 +137,7 @@ export function SponsorForm() {
                         }}
                       />
                     </label>
-                    <div class='h-64  flex flex-col items-center justify-center  border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600'>
+                    <div class='h-64 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600'>
                       {imgUrl ? (
                         <img
                           id='preview_img'
