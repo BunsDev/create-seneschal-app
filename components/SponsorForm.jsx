@@ -22,7 +22,6 @@ import { isAddress } from 'viem';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Arweave from 'arweave';
 
 import { GetMirrorTransactions } from '@/graphql/queries';
 
@@ -57,12 +56,12 @@ export function SponsorForm() {
 
   const getArweaveContent = async () => {
     if (data.transactions.edges.length) {
-      const arweave = Arweave.init({});
-      let res = await arweave.transactions.getData(
-        data.transactions.edges[0].node.id,
-        { decode: true, string: true }
+      let res = await fetch(
+        `https://arweave.net/${data.transactions.edges[0].node.id}`
       );
-      res = JSON.parse(res);
+      res = await res.json();
+      console.log(res);
+
       if (res.content) {
         append({
           content: `You are good at writing project proposals. Based on the context below, summarize the proposal strictly in not more than 100 words. \nContext:\n${res.content.body}`,
