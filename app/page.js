@@ -1,7 +1,6 @@
 'use client';
 
 import { Web3Button } from '@web3modal/react';
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { SponsorForm } from '@/components/SponsorForm';
