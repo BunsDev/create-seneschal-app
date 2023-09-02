@@ -1,17 +1,17 @@
-import { create } from 'ipfs-http-client';
+// const { create } = require('ipfs-http-client');
 
-export const IPFS_CLIENT = create({
-  host: 'ipfs.infura.io',
-  port: 5001,
-  protocol: 'https',
-  headers: {
-    authorization: `Basic ${Buffer.from(
-      process.env.NEXT_PUBLIC_INFURA_IPFS_ID +
-        ':' +
-        process.env.NEXT_PUBLIC_INFURA_IPFS_SECRET
-    ).toString('base64')}`
-  }
-});
+// export const IPFS_CLIENT = create({
+//   host: 'ipfs.infura.io',
+//   port: 5001,
+//   protocol: 'https',
+//   headers: {
+//     authorization: `Basic ${Buffer.from(
+//       process.env.NEXT_PUBLIC_INFURA_IPFS_ID +
+//         ':' +
+//         process.env.NEXT_PUBLIC_INFURA_IPFS_SECRET
+//     ).toString('base64')}`
+//   }
+// });
 
 export const SPONSOR_HAT_ID =
   '2102876251413889234285537715529826831881323510642131061921047436591104';
