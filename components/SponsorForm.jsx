@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import {
   Form,
   FormControl,
@@ -12,18 +14,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Image, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useLazyQuery } from '@apollo/client';
-import { useChat } from 'ai/react';
 import { useToast } from '@/components/ui/use-toast';
 
+import { Image, Loader2, RotateCcw } from 'lucide-react';
+
 import { isAddress } from 'viem';
+import { useContractWrite, useSignTypedData } from 'wagmi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-import { GetMirrorTransactions } from '@/graphql/queries';
+import { useProposal } from '@/hooks/useProposal';
+import { uploadProposal } from '@/lib/helpers';
+import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+import SeneschalAbi from '../abis/Seneschal.json';
 
 const formSchema = z.object({
   loot: z.string().refine((val) => Number(val) > 0 && Number(val) < 100, {
@@ -36,13 +40,42 @@ const formSchema = z.object({
 });
 
 export function SponsorForm() {
-  const [imgUrl, setImgUrl] = useState('');
-  const [aiProposalSummary, setAiProposalSummary] = useState('');
-
   const { toast } = useToast();
-  const { messages, append, isLoading } = useChat({
-    onFinish: (msg) => {
-      setAiProposalSummary(msg.content);
+  const { getProposal, gptMessages, writing, proposalSummary, mirrorData } =
+    useProposal();
+
+  const [imgUrl, setImgUrl] = useState('');
+  const [formData, setFormData] = useState('');
+  const [functionParams, setFunctionParams] = useState('');
+
+  const {
+    data,
+    isLoading: writePending,
+    isSuccess,
+    write
+  } = useContractWrite({
+    address: SENESCHAL_CONTRACT_ADDRESS,
+    abi: SeneschalAbi,
+    functionName: 'sponsor',
+    onError(err) {
+      console.log(err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Function call failed.'
+      });
+    }
+  });
+
+  const { signTypedData, isLoading: signaturePending } = useSignTypedData({
+    domain: functionParams?.domain,
+    message: functionParams?.commitmentTypedValues,
+    types: functionParams?.types,
+    primaryType: 'Commitment',
+    onSuccess(signature) {
+      write({
+        args: [functionParams.commitment, signature]
+      });
     }
   });
 
@@ -50,52 +83,50 @@ export function SponsorForm() {
     resolver: zodResolver(formSchema)
   });
 
-  const [getMirrorTx, { loading, error, data }] = useLazyQuery(
-    GetMirrorTransactions
-  );
-
-  const getArweaveContent = async () => {
-    if (data.transactions.edges.length) {
-      let res = await fetch(
-        `https://arweave.net/${data.transactions.edges[0].node.id}`
-      );
-      res = await res.json();
-      console.log(res);
-
-      if (res.content) {
-        append({
-          content: `You are good at writing project proposals. Based on the context below, summarize the proposal strictly in not more than 100 words. \nContext:\n${res.content.body}`,
-          role: 'user',
-          createdAt: new Date()
-        });
-      }
-    } else {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Mirror Digest',
-        description: 'Are you sure the proposal digest is valid?'
-      });
-    }
-  };
-
   function onSubmit(values) {
-    if (aiProposalSummary) {
-    } else {
-      getMirrorTx({
-        variables: { digest: values.proposalDigest }
+    if (!imgUrl) {
+      return toast({
+        variant: 'destructive',
+        title: 'Missing Input',
+        description: 'Proposal image is required.'
       });
     }
+    setFormData(values);
+    getProposal(values.proposalDigest);
   }
 
+  const handleSponsor = async () => {
+    let { commitment, commitmentTypedValues, domain, types } =
+      await uploadProposal(
+        imgUrl,
+        formData.proposalDigest,
+        mirrorData.transactions.edges[0].node.id,
+        proposalSummary,
+        formData.loot,
+        formData.recipientWallet
+      );
+
+    setFunctionParams({ commitmentTypedValues, commitment, domain, types });
+  };
+
   useEffect(() => {
-    if (data) {
-      getArweaveContent();
+    if (functionParams) {
+      toast({
+        title: 'Ready',
+        description: 'Commitment configured & available.'
+      });
+      signTypedData();
     }
-  }, [data]);
+  }, [functionParams]);
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8 mt-12'>
+      <form
+        onSubmit={form.handleSubmit(
+          !proposalSummary ? onSubmit : handleSponsor
+        )}
+        className='space-y-8 mt-12'
+      >
         <div className='grid grid-cols-2 gap-5'>
           <FormField
             control={form.control}
@@ -156,79 +187,63 @@ export function SponsorForm() {
               control={form.control}
               name='proposalImage'
               render={({ field }) => (
-                <FormItem className='mt-4'>
+                <FormItem className='mt-4 cursor-pointer'>
                   <FormLabel className='font-bold'>Proposal Image</FormLabel>
-                  <FormControl className=''>
-                    <div className='grid grid-cols-2 gap-5 w-full'>
-                      <label
-                        htmlFor='dropzone-file'
-                        className='flex flex-col items-center justify-center h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600'
-                      >
-                        <div className='flex flex-col items-center justify-center pt-5 pb-6'>
-                          <svg
-                            className='w-8 h-8 mb-4 text-gray-500 dark:text-gray-400'
-                            aria-hidden='true'
-                            xmlns='http://www.w3.org/2000/svg'
-                            fill='none'
-                            viewBox='0 0 20 16'
-                          >
-                            <path
-                              stroke='currentColor'
-                              strokeLinecap='round'
-                              strokeLinejoin='round'
-                              strokeWidth='2'
-                              d='M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2'
-                            />
-                          </svg>
-                          <p className='mb-2 text-sm text-gray-500 dark:text-gray-400'>
-                            <span className='font-semibold'>
-                              Click to upload
-                            </span>{' '}
-                            or drag and drop
-                          </p>
-                          <p className='text-xs text-gray-500 dark:text-gray-400'>
-                            PNG or JPEG
-                          </p>
-                        </div>
-                        <Input
-                          id='dropzone-file'
-                          type='file'
-                          accept='image/png, image/jpeg'
-                          className='hidden'
-                          onChange={(e) => {
-                            setImgUrl(URL.createObjectURL(e.target.files[0]));
-                          }}
-                        />
-                      </label>
-                      <div className='h-32 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600'>
-                        {imgUrl ? (
-                          <img
-                            id='preview_img'
-                            className='h-full w-full object-cover'
-                            src={imgUrl}
-                          />
-                        ) : (
-                          <Image className='h-16 w-16 ' />
-                        )}
-                      </div>
-                    </div>
+                  <FormControl>
+                    <Input
+                      className='cursor-pointer hover:bg-gray-100'
+                      id='image-input'
+                      type='file'
+                      accept='image/png, image/jpeg'
+                      {...field}
+                      onChange={(e) => {
+                        setImgUrl(
+                          e.target.files.length
+                            ? URL.createObjectURL(e.target.files[0])
+                            : ''
+                        );
+                      }}
+                    />
                   </FormControl>
                   <FormDescription>Image to use in metadata.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-gray-50   '>
+              {imgUrl ? (
+                <img
+                  id='preview_img'
+                  className='h-full w-full object-cover'
+                  src={imgUrl}
+                />
+              ) : (
+                <Image className='h-16 w-16 ' />
+              )}
+            </div>
           </div>
 
           <FormItem>
-            <FormLabel className='font-bold'>Proposal Description</FormLabel>
+            <div className='w-full flex flex-row justify-between'>
+              <FormLabel className='font-bold'>Proposal Summary </FormLabel>
+              <Button
+                className='h-4 w-4'
+                variant='outline'
+                size='icon'
+                disabled={writing || !formData}
+                onClick={() => getProposal(formData.proposalDigest)}
+              >
+                <RotateCcw />
+              </Button>
+            </div>
+
             <FormControl>
               <Textarea
                 className='h-full'
                 disabled
                 value={
-                  messages.length > 1
-                    ? messages[messages.length - 1].content
+                  gptMessages.length > 1
+                    ? gptMessages[gptMessages.length - 1].content
                     : 'A short summary of the proposal will be ai generated based on the proposal digest contents.'
                 }
               />
@@ -237,21 +252,20 @@ export function SponsorForm() {
           </FormItem>
         </div>
 
-        {aiProposalSummary ? (
-          <Button disabled={isLoading || loading}>
-            {(isLoading || loading) && (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            )}
-            {isLoading || loading ? 'Writing..' : 'Sponsor'}
-          </Button>
-        ) : (
-          <Button type='submit' disabled={isLoading || loading}>
-            {(isLoading || loading) && (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            )}
-            {isLoading || loading ? 'Writing..' : 'Generate Proposal'}
-          </Button>
-        )}
+        <Button
+          type='submit'
+          disabled={writing || signaturePending || writePending}
+          variant='outline'
+        >
+          {(writing || signaturePending || writePending) && (
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          )}
+          {writing || signaturePending || writePending
+            ? 'Please wait..'
+            : !proposalSummary
+            ? 'Confirm Proposal'
+            : 'Sponsor'}
+        </Button>
       </form>
     </Form>
   );
