@@ -199,11 +199,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -301,11 +297,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -362,11 +354,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -415,11 +403,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -507,11 +491,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -560,11 +540,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -634,11 +610,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -692,11 +664,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -764,11 +732,7 @@
             "name": "expirationTime",
             "type": "uint256"
           },
-          {
-            "internalType": "bytes32",
-            "name": "contentDigest",
-            "type": "bytes32"
-          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",

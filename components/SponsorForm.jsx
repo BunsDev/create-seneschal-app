@@ -19,9 +19,15 @@ import { useToast } from '@/components/ui/use-toast';
 import { Image, Loader2, RotateCcw } from 'lucide-react';
 
 import { isAddress } from 'viem';
-import { useContractWrite, useSignTypedData } from 'wagmi';
+import {
+  useContractWrite,
+  useContractRead,
+  useSignTypedData,
+  useSignMessage
+} from 'wagmi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ethers } from 'ethers';
 import * as z from 'zod';
 
 import { useProposal } from '@/hooks/useProposal';
@@ -33,7 +39,7 @@ const formSchema = z.object({
   loot: z.string().refine((val) => Number(val) > 0 && Number(val) < 100, {
     message: 'Must be between 1 & 99'
   }),
-  proposalDigest: z.string(),
+  proposalUrl: z.string().url(),
   recipientWallet: z.string().refine((value) => isAddress(value), {
     message: 'Not a valid ethereum address.'
   })
@@ -46,7 +52,22 @@ export function SponsorForm() {
 
   const [imgUrl, setImgUrl] = useState('');
   const [formData, setFormData] = useState('');
-  const [functionParams, setFunctionParams] = useState('');
+  // const [functionParams, setFunctionParams] = useState('');
+  const [commitment, setCommitment] = useState('');
+  const [commitmentDigest, setCommitmentDigest] = useState('');
+  console.log(commitment);
+
+  const {} = useContractRead({
+    address: SENESCHAL_CONTRACT_ADDRESS,
+    abi: SeneschalAbi,
+    functionName: 'getDigest',
+    enabled: commitment ? true : false,
+    args: [commitment],
+    onSuccess(data) {
+      console.log('Digest', data);
+      setCommitmentDigest(data);
+    }
+  });
 
   const {
     data,
@@ -67,14 +88,24 @@ export function SponsorForm() {
     }
   });
 
-  const { signTypedData, isLoading: signaturePending } = useSignTypedData({
-    domain: functionParams?.domain,
-    message: functionParams?.commitmentTypedValues,
-    types: functionParams?.types,
-    primaryType: 'Commitment',
-    onSuccess(signature) {
+  // const { signTypedData, isLoading: signaturePending } = useSignTypedData({
+  //   domain: functionParams?.domain,
+  //   message: functionParams?.commitmentTypedValues,
+  //   types: functionParams?.types,
+  //   primaryType: 'Commitment',
+  //   onSuccess(signature) {
+  //     write({
+  //       args: [functionParams.commitment, signature]
+  //     });
+  //   }
+  // });
+
+  const { signMessage, isLoading: signaturePending } = useSignMessage({
+    message: commitmentDigest,
+    onSuccess(data) {
+      console.log('signature', data);
       write({
-        args: [functionParams.commitment, signature]
+        args: [commitment, data]
       });
     }
   });
@@ -92,32 +123,53 @@ export function SponsorForm() {
       });
     }
     setFormData(values);
-    getProposal(values.proposalDigest);
+    console.log(
+      values.proposalUrl.substring(values.proposalUrl.lastIndexOf('/') + 1)
+    );
+    getProposal(
+      values.proposalUrl.substring(values.proposalUrl.lastIndexOf('/') + 1)
+    );
   }
 
   const handleSponsor = async () => {
-    let { commitment, commitmentTypedValues, domain, types } =
-      await uploadProposal(
-        imgUrl,
-        formData.proposalDigest,
-        mirrorData.transactions.edges[0].node.id,
-        proposalSummary,
-        formData.loot,
-        formData.recipientWallet
-      );
+    let commitment = [
+      0,
+      0,
+      Number(formData.loot),
+      0,
+      Date.now() + 1000,
+      Date.now(),
+      Date.now() + 10000,
+      formData.proposalUrl.substring(formData.proposalUrl.lastIndexOf('/') + 1),
+      formData.recipientWallet,
+      ethers.constants.AddressZero
+    ];
+    setCommitment(commitment);
 
-    setFunctionParams({ commitmentTypedValues, commitment, domain, types });
+    // let { commitment, commitmentTypedValues, domain, types } =
+    //   await uploadProposal(
+    //     imgUrl,
+    //     formData.proposalUrl.substring(
+    //       formData.proposalUrl.lastIndexOf('/') + 1
+    //     ),
+    //     mirrorData.transactions.edges[0].node.id,
+    //     proposalSummary,
+    //     formData.loot,
+    //     formData.recipientWallet
+    //   );
+
+    // setFunctionParams({ commitmentTypedValues, commitment, domain, types });
   };
 
   useEffect(() => {
-    if (functionParams) {
+    if (commitmentDigest) {
       toast({
         title: 'Ready',
         description: 'Commitment configured & available.'
       });
-      signTypedData();
+      signMessage();
     }
-  }, [functionParams]);
+  }, [commitmentDigest]);
 
   return (
     <Form {...form}>
@@ -136,7 +188,8 @@ export function SponsorForm() {
                 <FormLabel className='font-bold'>Loot</FormLabel>
                 <FormControl>
                   <Input
-                    placeholder='1'
+                    placeholder=''
+                    min={1}
                     type='number'
                     inputMode='decimal'
                     {...field}
@@ -169,15 +222,15 @@ export function SponsorForm() {
           <div className='flex flex-col'>
             <FormField
               control={form.control}
-              name='proposalDigest'
+              name='proposalUrl'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className='font-bold'>Proposal Digest</FormLabel>
+                  <FormLabel className='font-bold'>Proposal Url</FormLabel>
                   <FormControl>
                     <Input placeholder='' {...field} />
                   </FormControl>
                   <FormDescription>
-                    Content digest hash of the proposal's mirror article.
+                    The full url of the mirror article.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
