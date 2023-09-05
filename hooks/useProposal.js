@@ -8,6 +8,7 @@ export const useProposal = () => {
   const { toast } = useToast();
   const [proposalSummary, setProposalSummary] = useState('');
   const [arweaveTx, setArweaveTx] = useState('');
+  const [digest, setDigest] = useState('');
   const [writing, setWriting] = useState('');
 
   const [getMirrorTx, { data: mirrorData }] = useLazyQuery(
@@ -46,6 +47,7 @@ export const useProposal = () => {
 
   const getProposalSummary = async (digest) => {
     setWriting(true);
+    setDigest(digest);
     getMirrorTx({
       variables: { digest: digest }
     });
@@ -56,11 +58,13 @@ export const useProposal = () => {
       setArweaveTx(mirrorData.transactions.edges[0].node.id);
       getArweaveContent();
     } else {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Mirror Digest',
-        description: 'Are you sure the proposal digest is valid?'
-      });
+      if (digest) {
+        toast({
+          variant: 'destructive',
+          title: 'Invalid Mirror Digest',
+          description: 'Are you sure the proposal digest is valid?'
+        });
+      }
       setProposalSummary('');
       setWriting(false);
     }

@@ -41,6 +41,8 @@ import * as z from 'zod';
 
 import { useProposal } from '@/hooks/useProposal';
 import { useIpfs } from '@/hooks/useIpfs';
+import { useRedis } from '@/hooks/useRedis';
+
 import { formatCommitment, getTypes } from '@/lib/helpers';
 import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
 
@@ -69,10 +71,10 @@ export function SponsorForm() {
     arweaveTx
   } = useProposal();
   const { uploadToIpfs, ipfsHash, ipfsUploading } = useIpfs();
+  const { setMeta, redisLoading } = useRedis();
   const { chain } = useNetwork();
   const {
     chains,
-    error,
     isLoading: switchingNetwork,
     switchNetwork
   } = useSwitchNetwork();
@@ -89,7 +91,6 @@ export function SponsorForm() {
     enabled: commitment ? true : false,
     args: [commitment],
     onSuccess(data) {
-      console.log('Commitment hash', data);
       setCommitmentHash(data);
     }
   });
@@ -114,19 +115,28 @@ export function SponsorForm() {
         description: 'Function call failed.'
       });
     },
-    onSuccess(data) {
-      console.log(data);
+    async onSuccess(data) {
+      await setMeta(commitmentHash, ipfsHash);
       form.reset();
       setImgUrl('');
       setProposalUrl('');
       setCommitment('');
       setCommitmentHash('');
       setProposalSummary('');
+      toast({
+        title: 'Success',
+        description: 'Proposal sponsored.'
+      });
     }
   });
 
   const form = useForm({
-    resolver: zodResolver(formSchema)
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      loot: '',
+      expirationDate: '',
+      recipientWallet: ''
+    }
   });
 
   const handleChainChange = () => {
@@ -154,11 +164,7 @@ export function SponsorForm() {
       proposalSummary
     );
 
-    console.log(ipfsHash);
-
     let { values, domain, types } = await getTypes(commitment);
-
-    console.log(values, domain, types);
 
     signTypedData({
       domain,
@@ -375,12 +381,20 @@ export function SponsorForm() {
         <Button
           type='submit'
           disabled={
-            signaturePending || writing || writePending || ipfsUploading
+            signaturePending ||
+            writing ||
+            writePending ||
+            ipfsUploading ||
+            switchingNetwork ||
+            redisLoading
           }
         >
-          {(signaturePending || writing || writePending || ipfsUploading) && (
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-          )}
+          {(signaturePending ||
+            writing ||
+            writePending ||
+            ipfsUploading ||
+            switchingNetwork ||
+            redisLoading) && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
 
           {signaturePending
             ? 'Pending signature'
@@ -390,6 +404,10 @@ export function SponsorForm() {
             ? 'Summarizing'
             : writePending
             ? 'Pending transaction'
+            : switchingNetwork
+            ? 'Switching network'
+            : redisLoading
+            ? 'Storing hashes'
             : 'Sponsor Proposal'}
         </Button>
       </form>
