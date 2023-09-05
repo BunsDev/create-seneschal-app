@@ -71,6 +71,7 @@ export const useProposal = () => {
     gptMessages,
     writing,
     proposalSummary,
+    setProposalSummary,
     arweaveTx
   };
 };

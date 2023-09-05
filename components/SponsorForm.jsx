@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
-import { Image, Loader2, RotateCcw, CalendarIcon } from 'lucide-react';
+import { Image, Loader2, CalendarIcon } from 'lucide-react';
 
 import { isAddress } from 'viem';
 import {
@@ -40,7 +40,8 @@ import { format } from 'date-fns';
 import * as z from 'zod';
 
 import { useProposal } from '@/hooks/useProposal';
-import { formatCommitment, pinToIpfs, getTypes } from '@/lib/helpers';
+import { useIpfs } from '@/hooks/useIpfs';
+import { formatCommitment, getTypes } from '@/lib/helpers';
 import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
 
 import SeneschalAbi from '../abis/Seneschal.json';
@@ -64,8 +65,10 @@ export function SponsorForm() {
     gptMessages,
     writing,
     proposalSummary,
+    setProposalSummary,
     arweaveTx
   } = useProposal();
+  const { uploadToIpfs, ipfsHash, ipfsUploading } = useIpfs();
   const { chain } = useNetwork();
   const {
     chains,
@@ -110,6 +113,15 @@ export function SponsorForm() {
         title: 'Error',
         description: 'Function call failed.'
       });
+    },
+    onSuccess(data) {
+      console.log(data);
+      form.reset();
+      setImgUrl('');
+      setProposalUrl('');
+      setCommitment('');
+      setCommitmentHash('');
+      setProposalSummary('');
     }
   });
 
@@ -135,14 +147,14 @@ export function SponsorForm() {
   };
 
   const handleSponsor = async () => {
-    // let ipfsHash = await pinToIpfs(
-    //   imgUrl,
-    //   commitment.contextURL,
-    //   arweaveTx,
-    //   proposalSummary
-    // );
+    await uploadToIpfs(
+      imgUrl,
+      commitment.contextURL,
+      arweaveTx,
+      proposalSummary
+    );
 
-    // console.log(ipfsHash);
+    console.log(ipfsHash);
 
     let { values, domain, types } = await getTypes(commitment);
 
@@ -166,7 +178,7 @@ export function SponsorForm() {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(
-          chain.id != chains[0].id ? handleChainChange : onSubmit
+          chain?.id != chains[0].id ? handleChainChange : onSubmit
         )}
         className='space-y-8 mt-12'
       >
@@ -362,13 +374,23 @@ export function SponsorForm() {
 
         <Button
           type='submit'
-          disabled={signaturePending || writing || writePending}
+          disabled={
+            signaturePending || writing || writePending || ipfsUploading
+          }
         >
-          {(signaturePending || writing || writePending) && (
+          {(signaturePending || writing || writePending || ipfsUploading) && (
             <Loader2 className='mr-2 h-4 w-4 animate-spin' />
           )}
-          {(signaturePending || writing || writePending) && 'Please wait..'}
-          {!signaturePending && !writing && !writePending && 'Sponsor Proposal'}
+
+          {signaturePending
+            ? 'Pending signature'
+            : ipfsUploading
+            ? 'Uploading to ipfs'
+            : writing
+            ? 'Summarizing'
+            : writePending
+            ? 'Pending transaction'
+            : 'Sponsor Proposal'}
         </Button>
       </form>
     </Form>

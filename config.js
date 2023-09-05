@@ -1,16 +1,7 @@
-import { create } from 'ipfs-http-client';
+import { NFTStorage } from 'nft.storage';
 
-export const IPFS_CLIENT = create({
-  host: 'ipfs.infura.io',
-  port: 5001,
-  protocol: 'https',
-  headers: {
-    authorization: `Basic ${Buffer.from(
-      process.env.NEXT_PUBLIC_INFURA_IPFS_ID +
-        ':' +
-        process.env.NEXT_PUBLIC_INFURA_IPFS_SECRET
-    ).toString('base64')}`
-  }
+export const NFT_STORAGE = new NFTStorage({
+  token: process.env.NEXT_PUBLIC_NFT_STORAGE_KEY
 });
 
 export const SPONSOR_HAT_ID =
