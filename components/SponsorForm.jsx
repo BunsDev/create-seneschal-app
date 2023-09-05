@@ -11,35 +11,47 @@ import {
   FormLabel,
   FormMessage
 } from '@/components/ui/form';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 
-import { Image, Loader2, RotateCcw } from 'lucide-react';
+import { Image, Loader2, RotateCcw, CalendarIcon } from 'lucide-react';
 
 import { isAddress } from 'viem';
 import {
   useContractWrite,
   useContractRead,
   useSignTypedData,
-  useSignMessage
+  useSwitchNetwork,
+  useNetwork
 } from 'wagmi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ethers } from 'ethers';
+import { format } from 'date-fns';
+
 import * as z from 'zod';
 
 import { useProposal } from '@/hooks/useProposal';
-import { uploadProposal } from '@/lib/helpers';
+import { formatCommitment, pinToIpfs, getTypes } from '@/lib/helpers';
 import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+
 import SeneschalAbi from '../abis/Seneschal.json';
 
 const formSchema = z.object({
   loot: z.string().refine((val) => Number(val) > 0 && Number(val) < 100, {
     message: 'Must be between 1 & 99'
   }),
-  proposalUrl: z.string().url(),
+  expirationDate: z.date({
+    required_error: 'Proposal expiration date required.'
+  }),
   recipientWallet: z.string().refine((value) => isAddress(value), {
     message: 'Not a valid ethereum address.'
   })
@@ -47,34 +59,47 @@ const formSchema = z.object({
 
 export function SponsorForm() {
   const { toast } = useToast();
-  const { getProposal, gptMessages, writing, proposalSummary, mirrorData } =
-    useProposal();
+  const {
+    getProposalSummary,
+    gptMessages,
+    writing,
+    proposalSummary,
+    arweaveTx
+  } = useProposal();
+  const { chain } = useNetwork();
+  const {
+    chains,
+    error,
+    isLoading: switchingNetwork,
+    switchNetwork
+  } = useSwitchNetwork();
 
   const [imgUrl, setImgUrl] = useState('');
-  const [formData, setFormData] = useState('');
-  // const [functionParams, setFunctionParams] = useState('');
+  const [proposalUrl, setProposalUrl] = useState('');
   const [commitment, setCommitment] = useState('');
-  const [commitmentDigest, setCommitmentDigest] = useState('');
-  console.log(commitment);
+  const [commitmentHash, setCommitmentHash] = useState('');
 
   const {} = useContractRead({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
-    functionName: 'getDigest',
+    functionName: 'getCommitmentHash',
     enabled: commitment ? true : false,
     args: [commitment],
     onSuccess(data) {
-      console.log('Digest', data);
-      setCommitmentDigest(data);
+      console.log('Commitment hash', data);
+      setCommitmentHash(data);
     }
   });
 
-  const {
-    data,
-    isLoading: writePending,
-    isSuccess,
-    write
-  } = useContractWrite({
+  const { signTypedData, isLoading: signaturePending } = useSignTypedData({
+    onSuccess(signature) {
+      write({
+        args: [commitment, signature]
+      });
+    }
+  });
+
+  const { isLoading: writePending, write } = useContractWrite({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
     functionName: 'sponsor',
@@ -88,33 +113,15 @@ export function SponsorForm() {
     }
   });
 
-  // const { signTypedData, isLoading: signaturePending } = useSignTypedData({
-  //   domain: functionParams?.domain,
-  //   message: functionParams?.commitmentTypedValues,
-  //   types: functionParams?.types,
-  //   primaryType: 'Commitment',
-  //   onSuccess(signature) {
-  //     write({
-  //       args: [functionParams.commitment, signature]
-  //     });
-  //   }
-  // });
-
-  const { signMessage, isLoading: signaturePending } = useSignMessage({
-    message: commitmentDigest,
-    onSuccess(data) {
-      console.log('signature', data);
-      write({
-        args: [commitment, data]
-      });
-    }
-  });
-
   const form = useForm({
     resolver: zodResolver(formSchema)
   });
 
-  function onSubmit(values) {
+  const handleChainChange = () => {
+    switchNetwork(chains[0].id);
+  };
+
+  const onSubmit = (values) => {
     if (!imgUrl) {
       return toast({
         variant: 'destructive',
@@ -122,60 +129,44 @@ export function SponsorForm() {
         description: 'Proposal image is required.'
       });
     }
-    setFormData(values);
-    console.log(
-      values.proposalUrl.substring(values.proposalUrl.lastIndexOf('/') + 1)
-    );
-    getProposal(
-      values.proposalUrl.substring(values.proposalUrl.lastIndexOf('/') + 1)
-    );
-  }
+    values['proposalUrl'] = proposalUrl;
+    let _commitment = formatCommitment(values);
+    setCommitment(_commitment);
+  };
 
   const handleSponsor = async () => {
-    let commitment = [
-      0,
-      0,
-      Number(formData.loot),
-      0,
-      Date.now() + 1000,
-      Date.now(),
-      Date.now() + 10000,
-      formData.proposalUrl.substring(formData.proposalUrl.lastIndexOf('/') + 1),
-      formData.recipientWallet,
-      ethers.constants.AddressZero
-    ];
-    setCommitment(commitment);
+    // let ipfsHash = await pinToIpfs(
+    //   imgUrl,
+    //   commitment.contextURL,
+    //   arweaveTx,
+    //   proposalSummary
+    // );
 
-    // let { commitment, commitmentTypedValues, domain, types } =
-    //   await uploadProposal(
-    //     imgUrl,
-    //     formData.proposalUrl.substring(
-    //       formData.proposalUrl.lastIndexOf('/') + 1
-    //     ),
-    //     mirrorData.transactions.edges[0].node.id,
-    //     proposalSummary,
-    //     formData.loot,
-    //     formData.recipientWallet
-    //   );
+    // console.log(ipfsHash);
 
-    // setFunctionParams({ commitmentTypedValues, commitment, domain, types });
+    let { values, domain, types } = await getTypes(commitment);
+
+    console.log(values, domain, types);
+
+    signTypedData({
+      domain,
+      types,
+      message: values,
+      primaryType: 'Commitment'
+    });
   };
 
   useEffect(() => {
-    if (commitmentDigest) {
-      toast({
-        title: 'Ready',
-        description: 'Commitment configured & available.'
-      });
-      signMessage();
+    if (commitment) {
+      handleSponsor();
     }
-  }, [commitmentDigest]);
+  }, [commitment]);
 
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(
-          !proposalSummary ? onSubmit : handleSponsor
+          chain.id != chains[0].id ? handleChainChange : onSubmit
         )}
         className='space-y-8 mt-12'
       >
@@ -195,7 +186,9 @@ export function SponsorForm() {
                     {...field}
                   />
                 </FormControl>
-                <FormDescription>Amount of loot to reward.</FormDescription>
+                <FormDescription className='text-xs'>
+                  Amount of loot to reward.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -209,7 +202,7 @@ export function SponsorForm() {
                 <FormControl>
                   <Input placeholder='0x..' type='string' {...field} />
                 </FormControl>
-                <FormDescription>
+                <FormDescription className='text-xs'>
                   Wallet address of the recipient
                 </FormDescription>
                 <FormMessage />
@@ -227,42 +220,102 @@ export function SponsorForm() {
                 <FormItem>
                   <FormLabel className='font-bold'>Proposal Url</FormLabel>
                   <FormControl>
-                    <Input placeholder='' {...field} />
+                    <Input
+                      placeholder=''
+                      onChange={(e) => {
+                        setProposalUrl(e.target.value);
+                        if (!proposalSummary) {
+                          getProposalSummary(
+                            e.target.value.substring(
+                              e.target.value.lastIndexOf('/') + 1
+                            )
+                          );
+                        }
+                      }}
+                    />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className='text-xs'>
                     The full url of the mirror article.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name='proposalImage'
-              render={({ field }) => (
-                <FormItem className='mt-4 cursor-pointer'>
-                  <FormLabel className='font-bold'>Proposal Image</FormLabel>
-                  <FormControl>
-                    <Input
-                      className='cursor-pointer hover:bg-gray-100'
-                      id='image-input'
-                      type='file'
-                      accept='image/png, image/jpeg'
-                      {...field}
-                      onChange={(e) => {
-                        setImgUrl(
-                          e.target.files.length
-                            ? URL.createObjectURL(e.target.files[0])
-                            : ''
-                        );
-                      }}
-                    />
-                  </FormControl>
-                  <FormDescription>Image to use in metadata.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
+            <div className='grid grid-cols-2 mt-4'>
+              <FormField
+                control={form.control}
+                name='expirationDate'
+                render={({ field }) => (
+                  <FormItem className='flex flex-col justify-start'>
+                    <FormLabel className='font-bold'>Expiration Date</FormLabel>
+                    <Popover className='mb-0 pb-0'>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={'outline'}
+                            className={cn(
+                              'w-[240px] pl-3 text-left font-normal',
+                              !field.value && 'text-muted-foreground'
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, 'PPP')
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className='w-auto p-0' align='start'>
+                        <Calendar
+                          mode='single'
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < Date.now()}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormDescription className='text-xs'>
+                      Date after which the commitment cannot be claimed
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='proposalImage'
+                render={({ field }) => (
+                  <FormItem className='cursor-pointer flex flex-col justify-start '>
+                    <FormLabel className='font-bold'>Proposal Image</FormLabel>
+                    <FormControl>
+                      <Input
+                        className='cursor-pointer hover:bg-gray-100'
+                        id='image-input'
+                        type='file'
+                        accept='image/png'
+                        {...field}
+                        onChange={(e) => {
+                          setImgUrl(
+                            e.target.files.length
+                              ? URL.createObjectURL(e.target.files[0])
+                              : ''
+                          );
+                        }}
+                      />
+                    </FormControl>
+                    <FormDescription className='text-xs'>
+                      Image to use in metadata.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-gray-50   '>
               {imgUrl ? (
                 <img
@@ -277,16 +330,18 @@ export function SponsorForm() {
           </div>
 
           <FormItem>
-            <div className='w-full flex flex-row justify-between'>
+            <div className='w-full flex flex-row justify-between items-center'>
               <FormLabel className='font-bold'>Proposal Summary </FormLabel>
               <Button
-                className='h-4 w-4'
                 variant='outline'
-                size='icon'
-                disabled={writing || !formData}
-                onClick={() => getProposal(formData.proposalDigest)}
+                disabled={writing || !proposalSummary}
+                onClick={() =>
+                  getProposalSummary(
+                    proposalUrl.substring(proposalUrl.lastIndexOf('/') + 1)
+                  )
+                }
               >
-                <RotateCcw />
+                Regenerate Summary
               </Button>
             </div>
 
@@ -307,17 +362,13 @@ export function SponsorForm() {
 
         <Button
           type='submit'
-          disabled={writing || signaturePending || writePending}
-          variant='outline'
+          disabled={signaturePending || writing || writePending}
         >
-          {(writing || signaturePending || writePending) && (
+          {(signaturePending || writing || writePending) && (
             <Loader2 className='mr-2 h-4 w-4 animate-spin' />
           )}
-          {writing || signaturePending || writePending
-            ? 'Please wait..'
-            : !proposalSummary
-            ? 'Confirm Proposal'
-            : 'Sponsor'}
+          {(signaturePending || writing || writePending) && 'Please wait..'}
+          {!signaturePending && !writing && !writePending && 'Sponsor Proposal'}
         </Button>
       </form>
     </Form>

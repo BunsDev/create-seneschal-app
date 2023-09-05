@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 export const useProposal = () => {
   const { toast } = useToast();
   const [proposalSummary, setProposalSummary] = useState('');
+  const [arweaveTx, setArweaveTx] = useState('');
   const [writing, setWriting] = useState('');
 
   const [getMirrorTx, { data: mirrorData }] = useLazyQuery(
@@ -43,7 +44,7 @@ export const useProposal = () => {
     }
   };
 
-  const getProposal = async (digest) => {
+  const getProposalSummary = async (digest) => {
     setWriting(true);
     getMirrorTx({
       variables: { digest: digest }
@@ -52,6 +53,7 @@ export const useProposal = () => {
 
   useEffect(() => {
     if (mirrorData?.transactions.edges.length) {
+      setArweaveTx(mirrorData.transactions.edges[0].node.id);
       getArweaveContent();
     } else {
       toast({
@@ -64,5 +66,11 @@ export const useProposal = () => {
     }
   }, [mirrorData]);
 
-  return { getProposal, gptMessages, writing, proposalSummary, mirrorData };
+  return {
+    getProposalSummary,
+    gptMessages,
+    writing,
+    proposalSummary,
+    arweaveTx
+  };
 };

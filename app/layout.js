@@ -11,11 +11,11 @@ import {
 import { Toaster } from '@/components/ui/toaster';
 import { Web3Modal } from '@web3modal/react';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
-import { gnosis, mainnet } from 'wagmi/chains';
+import { gnosis } from 'wagmi/chains';
 
 import { AREWEAVE_GRAPHQL_CLIENT } from '@/graphql/config';
 
-const chains = [mainnet, gnosis];
+const chains = [gnosis];
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
