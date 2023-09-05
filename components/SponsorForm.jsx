@@ -130,7 +130,7 @@ export function SponsorForm() {
   });
 
   const handleChainChange = () => {
-    switchNetwork(chains[0].id);
+    switchNetwork(chains[0]?.id);
   };
 
   const onSubmit = (values) => {
@@ -178,7 +178,7 @@ export function SponsorForm() {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(
-          chain?.id != chains[0].id ? handleChainChange : onSubmit
+          chain?.id != chains[0]?.id ? handleChainChange : onSubmit
         )}
         className='space-y-8 mt-12'
       >
