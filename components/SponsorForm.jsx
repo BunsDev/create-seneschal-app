@@ -28,10 +28,10 @@ import { Image, Loader2, CalendarIcon } from 'lucide-react';
 import { isAddress } from 'viem';
 import {
   useContractWrite,
-  useContractRead,
   useSignTypedData,
   useSwitchNetwork,
-  useNetwork
+  useNetwork,
+  useWaitForTransaction
 } from 'wagmi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -70,7 +70,7 @@ export function SponsorForm() {
     setProposalSummary,
     arweaveTx
   } = useProposal();
-  const { uploadToIpfs, ipfsHash, ipfsUploading } = useIpfs();
+  const { uploadToIpfs, ipfsUploading } = useIpfs();
   const { setMeta, redisLoading } = useRedis();
   const { chain } = useNetwork();
   const {
@@ -82,18 +82,6 @@ export function SponsorForm() {
   const [imgUrl, setImgUrl] = useState('');
   const [proposalUrl, setProposalUrl] = useState('');
   const [commitment, setCommitment] = useState('');
-  const [commitmentHash, setCommitmentHash] = useState('');
-
-  const {} = useContractRead({
-    address: SENESCHAL_CONTRACT_ADDRESS,
-    abi: SeneschalAbi,
-    functionName: 'getCommitmentHash',
-    enabled: commitment ? true : false,
-    args: [commitment],
-    onSuccess(data) {
-      setCommitmentHash(data);
-    }
-  });
 
   const { signTypedData, isLoading: signaturePending } = useSignTypedData({
     onSuccess(signature) {
@@ -103,10 +91,20 @@ export function SponsorForm() {
     }
   });
 
-  const { isLoading: writePending, write } = useContractWrite({
+  const {
+    isLoading: writePending,
+    write,
+    data: writeData
+  } = useContractWrite({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
     functionName: 'sponsor',
+    onSuccess(data) {
+      toast({
+        title: 'Mining Transaction',
+        description: 'Please do not close the tab.'
+      });
+    },
     onError(err) {
       console.log(err);
       toast({
@@ -114,14 +112,27 @@ export function SponsorForm() {
         title: 'Error',
         description: 'Function call failed.'
       });
-    },
+    }
+  });
+
+  const { isLoading: txPending } = useWaitForTransaction({
+    hash: writeData?.hash,
     async onSuccess(data) {
-      await setMeta(commitmentHash, ipfsHash);
+      if (data.logs) {
+        let topics = data.logs[0].topics;
+        let ipfsHash = await uploadToIpfs(
+          imgUrl,
+          commitment.contextURL,
+          arweaveTx,
+          proposalSummary
+        );
+        await setMeta(topics[2], ipfsHash);
+      }
+
       form.reset();
       setImgUrl('');
       setProposalUrl('');
       setCommitment('');
-      setCommitmentHash('');
       setProposalSummary('');
       toast({
         title: 'Success',
@@ -157,13 +168,6 @@ export function SponsorForm() {
   };
 
   const handleSponsor = async () => {
-    await uploadToIpfs(
-      imgUrl,
-      commitment.contextURL,
-      arweaveTx,
-      proposalSummary
-    );
-
     let { values, domain, types } = await getTypes(commitment);
 
     signTypedData({
@@ -384,6 +388,7 @@ export function SponsorForm() {
             signaturePending ||
             writing ||
             writePending ||
+            txPending ||
             ipfsUploading ||
             switchingNetwork ||
             redisLoading
@@ -392,6 +397,7 @@ export function SponsorForm() {
           {(signaturePending ||
             writing ||
             writePending ||
+            txPending ||
             ipfsUploading ||
             switchingNetwork ||
             redisLoading) && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
@@ -399,10 +405,10 @@ export function SponsorForm() {
           {signaturePending
             ? 'Pending signature'
             : ipfsUploading
-            ? 'Uploading to ipfs'
+            ? 'Uploading to IPFS'
             : writing
             ? 'Summarizing'
-            : writePending
+            : writePending || txPending
             ? 'Pending transaction'
             : switchingNetwork
             ? 'Switching network'

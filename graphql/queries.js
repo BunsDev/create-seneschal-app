@@ -18,3 +18,51 @@ export const GetMirrorTransactions = gql`
     }
   }
 `;
+
+export const GetSponsoredProposals = gql`
+  query {
+    proposals(where: { status: Sponsored }) {
+      id
+      sponsor
+      processor
+      recipient
+      status
+      commitmentDetails {
+        eligibleHat
+        shares
+        loot
+        extraRewardAmount
+        timeFactor
+        sponsoredTime
+        expirationTime
+        contextURL
+        recipient
+        extraRewardToken
+      }
+    }
+  }
+`;
+
+export const GetProcessedProposals = gql`
+  query {
+    proposals(where: { status: Processed }) {
+      id
+      sponsor
+      processor
+      recipient
+      status
+      commitmentDetails {
+        eligibleHat
+        shares
+        loot
+        extraRewardAmount
+        timeFactor
+        sponsoredTime
+        expirationTime
+        contextURL
+        recipient
+        extraRewardToken
+      }
+    }
+  }
+`;

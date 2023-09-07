@@ -19,6 +19,9 @@ const nextConfig = {
         ]
       }
     ];
+  },
+  images: {
+    domains: ['seneschal-silverdoor.infura-ipfs.io']
   }
 };
 

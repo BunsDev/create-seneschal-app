@@ -3,7 +3,6 @@ import { pinToIpfs } from '@/lib/helpers';
 
 export const useIpfs = () => {
   const [ipfsUploading, setIpfsUploading] = useState(false);
-  const [ipfsHash, setIpfsHash] = useState('');
 
   const uploadToIpfs = async (
     imgUrl,
@@ -18,13 +17,12 @@ export const useIpfs = () => {
       arweaveTx,
       proposalSummary
     );
-    setIpfsHash(ipfsHash);
     setIpfsUploading(false);
+    return ipfsHash;
   };
 
   return {
     ipfsUploading,
-    uploadToIpfs,
-    ipfsHash
+    uploadToIpfs
   };
 };

@@ -4,7 +4,6 @@ import axios from 'axios';
 
 export const useRedis = () => {
   const [redisLoading, setRedisLoading] = useState(false);
-  const [redisHash, setRedisHash] = useState('');
 
   const setMeta = async (commitmentHash, ipfsHash) => {
     setRedisLoading(true);
@@ -16,15 +15,16 @@ export const useRedis = () => {
     setRedisLoading(true);
     let { data } = await axios.post('/api/get', { commitmentHash });
     if (data.status === 'success') {
-      setRedisHash(data.hash);
+      setRedisLoading(false);
+      return data.hash;
+    } else {
+      setRedisLoading(false);
     }
-    setRedisLoading(false);
   };
 
   return {
     setMeta,
     getMeta,
-    redisLoading,
-    redisHash
+    redisLoading
   };
 };
