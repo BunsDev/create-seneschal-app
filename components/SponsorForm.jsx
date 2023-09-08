@@ -22,15 +22,13 @@ import { Calendar } from '@/components/ui/calendar';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-
+import { ToastAction } from '@/components/ui/toast';
 import { Image, Loader2, CalendarIcon } from 'lucide-react';
 
 import { isAddress } from 'viem';
 import {
   useContractWrite,
   useSignTypedData,
-  useSwitchNetwork,
-  useNetwork,
   useWaitForTransaction
 } from 'wagmi';
 import { useForm } from 'react-hook-form';
@@ -60,7 +58,7 @@ const formSchema = z.object({
   })
 });
 
-export function SponsorForm() {
+export function SponsorForm({ isSponsor }) {
   const { toast } = useToast();
   const {
     getProposalSummary,
@@ -72,12 +70,6 @@ export function SponsorForm() {
   } = useProposal();
   const { uploadToIpfs, ipfsUploading } = useIpfs();
   const { setMeta, redisLoading } = useRedis();
-  const { chain } = useNetwork();
-  const {
-    chains,
-    isLoading: switchingNetwork,
-    switchNetwork
-  } = useSwitchNetwork();
 
   const [imgUrl, setImgUrl] = useState('');
   const [proposalUrl, setProposalUrl] = useState('');
@@ -102,7 +94,17 @@ export function SponsorForm() {
     onSuccess(data) {
       toast({
         title: 'Mining Transaction',
-        description: 'Please do not close the tab.'
+        description: 'Please do not close the tab.',
+        action: (
+          <ToastAction
+            altText='View Tx'
+            onClick={() =>
+              window.open(`https://gnosisscan.io/tx/${data.hash}`, '_blank')
+            }
+          >
+            View Tx
+          </ToastAction>
+        )
       });
     },
     onError(err) {
@@ -150,10 +152,6 @@ export function SponsorForm() {
     }
   });
 
-  const handleChainChange = () => {
-    switchNetwork(chains[0]?.id);
-  };
-
   const onSubmit = (values) => {
     if (!imgUrl) {
       return toast({
@@ -186,12 +184,7 @@ export function SponsorForm() {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(
-          chain?.id != chains[0]?.id ? handleChainChange : onSubmit
-        )}
-        className='space-y-8 mt-12'
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8 mt-12'>
         <div className='grid grid-cols-2 gap-5'>
           <FormField
             control={form.control}
@@ -390,8 +383,8 @@ export function SponsorForm() {
             writePending ||
             txPending ||
             ipfsUploading ||
-            switchingNetwork ||
-            redisLoading
+            redisLoading ||
+            !isSponsor
           }
         >
           {(signaturePending ||
@@ -399,10 +392,11 @@ export function SponsorForm() {
             writePending ||
             txPending ||
             ipfsUploading ||
-            switchingNetwork ||
             redisLoading) && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
 
-          {signaturePending
+          {!isSponsor
+            ? 'Not a Sponsor'
+            : signaturePending
             ? 'Pending signature'
             : ipfsUploading
             ? 'Uploading to IPFS'
@@ -410,8 +404,6 @@ export function SponsorForm() {
             ? 'Summarizing'
             : writePending || txPending
             ? 'Pending transaction'
-            : switchingNetwork
-            ? 'Switching network'
             : redisLoading
             ? 'Storing hashes'
             : 'Sponsor Proposal'}

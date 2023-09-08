@@ -63,6 +63,9 @@ export const GetProcessedProposals = gql`
         recipient
         extraRewardToken
       }
+      processingDetails {
+        blockTimestamp
+      }
     }
   }
 `;
