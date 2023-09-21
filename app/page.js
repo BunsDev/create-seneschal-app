@@ -36,10 +36,13 @@ import {
 } from '@/config';
 import HatsAbi from '../abis/Hats.json';
 import { PokingForm } from '@/components/PokingForm';
+import { useState } from 'react';
 
 export default function Home() {
   const { address } = useAccount();
   const { chain } = useNetwork();
+
+  const [tabValue, setTabValue] = useState('sponsor');
 
   const {
     chains,
@@ -98,24 +101,29 @@ export default function Home() {
           <p className='ml-2 text-muted-foreground'>Validating hats</p>
         </div>
       ) : (
-        <Tabs defaultValue='sponsor' className='w-full'>
+        <Tabs
+          defaultValue='sponsor'
+          value={tabValue}
+          onValueChange={(value) => setTabValue(value)}
+          className='w-full'
+        >
           <TabsList className='w-full bg-slate-200 '>
             <TabsTrigger value='sponsor' className='font-semibold'>
-              <PenSquare className='h-4 w-4 mr-2' /> <p>For Sponsoring</p>
+              <PenSquare className='h-4 w-4 mr-2' /> <p>Sponsor</p>
             </TabsTrigger>
             <TabsTrigger value='processor' className='font-semibold'>
-              <Stamp className='h-4 w-4 mr-2' /> <p>For Processing</p>
+              <Stamp className='h-4 w-4 mr-2' /> <p>Verify</p>
             </TabsTrigger>
             <TabsTrigger value='poking' className='font-semibold'>
-              <ConciergeBell className='h-4 w-4 mr-2' /> <p>For Poking</p>
+              <ConciergeBell className='h-4 w-4 mr-2' /> <p>Submit</p>
             </TabsTrigger>
             <TabsTrigger value='recipient' className='font-semibold'>
-              <Gem className='h-4 w-4 mr-2' /> <p>For Claiming</p>
+              <Gem className='h-4 w-4 mr-2' /> <p>Claim</p>
             </TabsTrigger>
           </TabsList>
           <TabsContent value='sponsor'>
             <ApolloProvider client={AREWEAVE_GRAPHQL_CLIENT}>
-              <SponsorForm isSponsor={isSponsor} />
+              <SponsorForm isSponsor={isSponsor} setTabValue={setTabValue} />
             </ApolloProvider>
           </TabsContent>
 

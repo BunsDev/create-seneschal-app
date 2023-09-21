@@ -229,9 +229,12 @@ export function ProcessorForm({ isProcessor }) {
                     />
                   </div>
 
-                  <CardDescription>
+                  <CardDescription
+                    onClick={() => window.open(contextURL, '_blank')}
+                    className='hover:opacity-75 cursor-pointer'
+                  >
                     <div className='relative'>
-                      <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-white'>
+                      <div className='h-40 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-white'>
                         {proposalStatus === 'Poked' && (
                           <Button
                             disabled
@@ -244,7 +247,7 @@ export function ProcessorForm({ isProcessor }) {
                         {proposalImage ? (
                           <img
                             id='preview_img'
-                            className='h-32 w-full object-cover'
+                            className='h-40 w-full object-cover'
                             src={`${IPFS_BASE_GATEWAY}/${proposalImage}`}
                           />
                         ) : (

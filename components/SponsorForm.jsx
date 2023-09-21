@@ -28,6 +28,7 @@ import { Image, Loader2, CalendarIcon, PenSquare } from 'lucide-react';
 import { isAddress } from 'viem';
 import {
   useContractWrite,
+  useContractRead,
   useSignTypedData,
   useWaitForTransaction
 } from 'wagmi';
@@ -39,7 +40,6 @@ import * as z from 'zod';
 
 import { useProposal } from '@/hooks/useProposal';
 import { useIpfs } from '@/hooks/useIpfs';
-import { useRedis } from '@/hooks/useRedis';
 
 import { formatCommitment, getTypes } from '@/lib/helpers';
 import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
@@ -49,6 +49,9 @@ import SeneschalAbi from '../abis/Seneschal.json';
 const formSchema = z.object({
   loot: z.string().refine((val) => Number(val) > 0 && Number(val) <= 20000, {
     message: 'Must be between 1 & 20,000'
+  }),
+  timeFactor: z.date({
+    required_error: 'Proposal deadline required.'
   }),
   expirationDate: z.date({
     required_error: 'Proposal expiration date required.'
@@ -61,7 +64,7 @@ const formSchema = z.object({
   })
 });
 
-export function SponsorForm({ isSponsor }) {
+export function SponsorForm({ isSponsor, setTabValue }) {
   const { toast } = useToast();
   const {
     getProposalSummary,
@@ -72,11 +75,16 @@ export function SponsorForm({ isSponsor }) {
     arweaveTx
   } = useProposal();
   const { uploadToIpfs, ipfsUploading } = useIpfs();
-  const { setMeta, redisLoading } = useRedis();
 
   const [imgUrl, setImgUrl] = useState('');
   const [proposalUrl, setProposalUrl] = useState('');
   const [commitment, setCommitment] = useState('');
+
+  const { data: claimDelay } = useContractRead({
+    address: SENESCHAL_CONTRACT_ADDRESS,
+    abi: SeneschalAbi,
+    functionName: 'getClaimDelay'
+  });
 
   const { signTypedData, isLoading: signaturePending } = useSignTypedData({
     onSuccess(signature) {
@@ -151,6 +159,7 @@ export function SponsorForm({ isSponsor }) {
         title: 'Success',
         description: 'Proposal sponsored.'
       });
+      setTabValue('processor');
     }
   });
 
@@ -263,49 +272,7 @@ export function SponsorForm({ isSponsor }) {
               )}
             />
 
-            <div className='grid grid-cols-2 mt-4'>
-              <FormField
-                control={form.control}
-                name='expirationDate'
-                render={({ field }) => (
-                  <FormItem className='flex flex-col justify-start'>
-                    <FormLabel className='font-bold'>Expiration Date</FormLabel>
-                    <Popover className='mb-0 pb-0'>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={'outline'}
-                            className={cn(
-                              'w-[240px] pl-3 text-left font-normal',
-                              !field.value && 'text-muted-foreground'
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, 'PPP')
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className='w-auto p-0' align='start'>
-                        <Calendar
-                          mode='single'
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < Date.now()}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormDescription className='text-xs'>
-                      Date after which the commitment cannot be claimed
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className='grid grid-cols-1 mt-4'>
               <FormField
                 control={form.control}
                 name='proposalImage'
@@ -335,18 +302,112 @@ export function SponsorForm({ isSponsor }) {
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-gray-50   '>
-              {imgUrl ? (
-                <img
-                  id='preview_img'
-                  className='h-full w-full object-cover'
-                  src={imgUrl}
+              <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-gray-50   '>
+                {imgUrl ? (
+                  <img
+                    id='preview_img'
+                    className='h-full w-full object-cover'
+                    src={imgUrl}
+                  />
+                ) : (
+                  <Image className='h-16 w-16 ' />
+                )}
+              </div>
+
+              <div className='grid grid-cols-2 mt-4'>
+                <FormField
+                  control={form.control}
+                  name='timeFactor'
+                  render={({ field }) => (
+                    <FormItem className='flex flex-col justify-start'>
+                      <FormLabel className='font-bold'>
+                        Processing Deadline
+                      </FormLabel>
+                      <Popover className='mb-0 pb-0'>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'w-[240px] pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0' align='start'>
+                          <Calendar
+                            mode='single'
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < Date.now() + Number(claimDelay)
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription className='text-xs'>
+                        Date after which the commitment cannot be processed
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              ) : (
-                <Image className='h-16 w-16 ' />
-              )}
+
+                <FormField
+                  control={form.control}
+                  name='expirationDate'
+                  render={({ field }) => (
+                    <FormItem className='flex flex-col justify-start'>
+                      <FormLabel className='font-bold'>
+                        Expiration Date
+                      </FormLabel>
+                      <Popover className='mb-0 pb-0'>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'w-[240px] pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className='ml-auto h-4 w-4 opacity-50' />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-auto p-0' align='start'>
+                          <Calendar
+                            mode='single'
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) => date < Date.now()}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription className='text-xs'>
+                        Date after which the commitment cannot be claimed
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
           </div>
 
@@ -397,7 +458,7 @@ export function SponsorForm({ isSponsor }) {
 
             <FormControl>
               <Textarea
-                className='h-52'
+                className='h-64'
                 disabled
                 value={
                   gptMessages.length > 1
