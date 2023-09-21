@@ -11,7 +11,14 @@ import {
   useSwitchNetwork
 } from 'wagmi';
 
-import { Wallet, Loader2, PenSquare, Stamp, Gem } from 'lucide-react';
+import {
+  Wallet,
+  Loader2,
+  PenSquare,
+  Stamp,
+  Gem,
+  ConciergeBell
+} from 'lucide-react';
 
 import { SponsorForm } from '@/components/SponsorForm';
 import { ProcessorForm } from '@/components/ProcessorForm';
@@ -28,6 +35,7 @@ import {
   PROCESSOR_HAT_ID
 } from '@/config';
 import HatsAbi from '../abis/Hats.json';
+import { PokingForm } from '@/components/PokingForm';
 
 export default function Home() {
   const { address } = useAccount();
@@ -98,6 +106,9 @@ export default function Home() {
             <TabsTrigger value='processor' className='font-semibold'>
               <Stamp className='h-4 w-4 mr-2' /> <p>For Processing</p>
             </TabsTrigger>
+            <TabsTrigger value='poking' className='font-semibold'>
+              <ConciergeBell className='h-4 w-4 mr-2' /> <p>For Poking</p>
+            </TabsTrigger>
             <TabsTrigger value='recipient' className='font-semibold'>
               <Gem className='h-4 w-4 mr-2' /> <p>For Claiming</p>
             </TabsTrigger>
@@ -111,6 +122,12 @@ export default function Home() {
           <TabsContent value='processor'>
             <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
               <ProcessorForm isProcessor={isProcessor} />
+            </ApolloProvider>
+          </TabsContent>
+
+          <TabsContent value='poking'>
+            <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
+              <PokingForm />
             </ApolloProvider>
           </TabsContent>
 

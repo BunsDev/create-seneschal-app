@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { ToastAction } from '@/components/ui/toast';
-import { Image, Loader2, CalendarIcon } from 'lucide-react';
+import { Image, Loader2, CalendarIcon, PenSquare } from 'lucide-react';
 
 import { isAddress } from 'viem';
 import {
@@ -421,11 +421,15 @@ export function SponsorForm({ isSponsor }) {
             !isSponsor
           }
         >
-          {(signaturePending ||
-            writing ||
-            writePending ||
-            txPending ||
-            ipfsUploading) && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
+          {signaturePending ||
+          writing ||
+          writePending ||
+          txPending ||
+          ipfsUploading ? (
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          ) : (
+            <PenSquare className='h-4 w-4 mr-2' />
+          )}
 
           {!isSponsor
             ? 'Not a Sponsor'

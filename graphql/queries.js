@@ -21,7 +21,7 @@ export const GetMirrorTransactions = gql`
 
 export const GetSponsoredProposals = gql`
   query {
-    proposals(where: { status: Sponsored }) {
+    proposals {
       id
       sponsor
       processor

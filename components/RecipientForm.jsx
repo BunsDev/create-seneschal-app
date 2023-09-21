@@ -1,6 +1,5 @@
 'use client';
 
-import { Loader2, ExternalLink, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -23,7 +22,7 @@ import {
 import { formatEther } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { ImageOff } from 'lucide-react';
+import { Loader2, ExternalLink, ImageOff, Gem } from 'lucide-react';
 import { getAccountString } from '@/lib/helpers';
 
 import { useQuery } from '@apollo/client';
@@ -41,7 +40,7 @@ import axios from 'axios';
 
 import { CountdownTimer } from './CountdownTimer';
 import { getTypes } from '@/lib/helpers';
-import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+import { IPFS_BASE_GATEWAY, SENESCHAL_CONTRACT_ADDRESS } from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
 export function RecipientForm() {
@@ -126,7 +125,7 @@ export function RecipientForm() {
     for (let i = 0; i < formattedProposals.length; i++) {
       try {
         let { data } = await axios.get(
-          `https://seneschal-silverdoor.infura-ipfs.io/ipfs/${formattedProposals[i].commitmentDetails.metadata}`
+          `${IPFS_BASE_GATEWAY}/${formattedProposals[i].commitmentDetails.metadata}`
         );
 
         // Update the proposal object with the fetched metadata.
@@ -224,7 +223,7 @@ export function RecipientForm() {
                           <img
                             id='preview_img'
                             className='h-32 w-full object-cover'
-                            src={`https://seneschal-silverdoor.infura-ipfs.io/ipfs/${proposalImage}`}
+                            src={`${IPFS_BASE_GATEWAY}/${proposalImage}`}
                           />
                         ) : (
                           <ImageOff className='h-16 w-16 ' />
@@ -310,7 +309,7 @@ export function RecipientForm() {
                           address.toLowerCase() !== recipient.toLowerCase()
                         }
                       >
-                        <BookOpen className='mr-2 h-4 w-4' />{' '}
+                        <Gem className='mr-2 h-4 w-4' />{' '}
                         {address.toLowerCase() !== recipient.toLowerCase()
                           ? 'Not a recipient'
                           : 'View Summary'}

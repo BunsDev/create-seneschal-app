@@ -25,6 +25,7 @@ export const CountdownTimer = ({ timeFactor, delay }) => {
         if (isEarly) {
           setIsEarly(false);
           newRemainingTime = calculateRemainingTime(timeFactor);
+          setRemainingTime(newRemainingTime);
         } else {
           clearInterval(intervalId);
         }
@@ -48,7 +49,7 @@ export const CountdownTimer = ({ timeFactor, delay }) => {
   };
 
   return (
-    <Button variant='outline' disabled={remainingTime > 0}>
+    <Button variant='outline' disabled={isEarly}>
       {remainingTime > 0 ? <p>{formatTime(remainingTime)}</p> : <p>Expired</p>}
     </Button>
   );

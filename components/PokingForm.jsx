@@ -19,34 +19,30 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-
+import { ConciergeBell } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { ImageOff, Stamp, Loader2, ExternalLink } from 'lucide-react';
+import { Loader2, ExternalLink, ImageOff } from 'lucide-react';
 import { getAccountString } from '@/lib/helpers';
 
 import { useQuery } from '@apollo/client';
 import { GetSponsoredProposals } from '@/graphql/queries';
 import { useState } from 'react';
 import {
-  useSignTypedData,
   useWaitForTransaction,
   useContractWrite,
   useContractRead,
   useAccount
 } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, keccak256 } from 'viem';
 import axios from 'axios';
 
 import { CountdownTimer } from './CountdownTimer';
-import { getTypes } from '@/lib/helpers';
 import { IPFS_BASE_GATEWAY, SENESCHAL_CONTRACT_ADDRESS } from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
-export function ProcessorForm({ isProcessor }) {
+export function PokingForm() {
   const { address } = useAccount();
-
-  const [commitment, setCommitment] = useState('');
   const [txSuccess, setTxSuccess] = useState(false);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,22 +52,6 @@ export function ProcessorForm({ isProcessor }) {
   const { refetch } = useQuery(GetSponsoredProposals, {
     onCompleted: (data) => decodeHash(data.proposals)
     // pollInterval: 270000
-  });
-
-  const { signTypedData, isLoading: signaturePending } = useSignTypedData({
-    onSuccess(signature) {
-      write({
-        args: [commitment, signature]
-      });
-    },
-    onError(err) {
-      console.log(err);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Function call failed.'
-      });
-    }
   });
 
   const { data: claimDelay } = useContractRead({
@@ -87,7 +67,7 @@ export function ProcessorForm({ isProcessor }) {
   } = useContractWrite({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
-    functionName: 'process',
+    functionName: 'poke',
     onSuccess(data) {
       toast({
         title: 'Mining Transaction',
@@ -119,9 +99,8 @@ export function ProcessorForm({ isProcessor }) {
     async onSuccess() {
       toast({
         title: 'Success',
-        description: 'Proposal processed.'
+        description: 'Proposal poked.'
       });
-      setCommitment('');
       setTxSuccess(true);
       let data = await refetch();
       decodeHash(data.data.proposals);
@@ -130,7 +109,7 @@ export function ProcessorForm({ isProcessor }) {
 
   const decodeHash = async (_proposals) => {
     let formattedProposals = _proposals.filter(
-      (p) => p.status === 'Sponsored' || p.status === 'Poked'
+      (p) => p.status === 'Sponsored' && p.status !== 'Poked'
     );
 
     for (let i = 0; i < formattedProposals.length; i++) {
@@ -149,7 +128,7 @@ export function ProcessorForm({ isProcessor }) {
     setLoading(false);
   };
 
-  const handleProcess = async (_commitment) => {
+  const handlePoke = async (_commitment) => {
     let commitmentArray = [
       Number(_commitment.eligibleHat),
       Number(_commitment.shares),
@@ -164,15 +143,8 @@ export function ProcessorForm({ isProcessor }) {
       _commitment.extraRewardToken
     ];
 
-    setCommitment(commitmentArray);
-
-    let { values, domain, types } = await getTypes(commitmentArray);
-
-    signTypedData({
-      domain,
-      types,
-      message: values,
-      primaryType: 'Commitment'
+    write({
+      args: [commitmentArray, keccak256(_commitment.metadata)]
     });
   };
 
@@ -185,8 +157,6 @@ export function ProcessorForm({ isProcessor }) {
               Number(claimDelay) +
                 Number(proposal.commitmentDetails.sponsoredTime) >
               Date.now() / 1000;
-
-            let proposalStatus = proposal.status;
 
             let contextURL = proposal.commitmentDetails.contextURL;
             let proposalId = proposal.id;
@@ -232,15 +202,6 @@ export function ProcessorForm({ isProcessor }) {
                   <CardDescription>
                     <div className='relative'>
                       <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-white'>
-                        {proposalStatus === 'Poked' && (
-                          <Button
-                            disabled
-                            className='right-0 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white text-black w-fit text-base'
-                          >
-                            Poked
-                          </Button>
-                        )}
-
                         {proposalImage ? (
                           <img
                             id='preview_img'
@@ -317,11 +278,21 @@ export function ProcessorForm({ isProcessor }) {
                     <AlertDialogTrigger asChild>
                       <Button
                         className='w-full'
-                        variant={isEarly ? 'outline' : 'default'}
-                        disabled={isEarly}
+                        variant={
+                          isEarly ||
+                          address.toLowerCase() !== recipient.toLowerCase()
+                            ? 'outline'
+                            : 'default'
+                        }
+                        disabled={
+                          isEarly ||
+                          address.toLowerCase() !== recipient.toLowerCase()
+                        }
                       >
-                        <Stamp className='mr-2 h-4 w-4' />
-                        Process
+                        <ConciergeBell className='mr-2 h-4 w-4' />
+                        {address.toLowerCase() !== recipient.toLowerCase()
+                          ? 'Cannot Poke'
+                          : 'Poke'}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -334,38 +305,23 @@ export function ProcessorForm({ isProcessor }) {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel
-                          disabled={
-                            signaturePending || writePending || txPending
-                          }
-                        >
+                        <AlertDialogCancel disabled={writePending || txPending}>
                           {!txSuccess ? 'Cancel' : 'Close'}
                         </AlertDialogCancel>
                         {!txSuccess && (
                           <Button
-                            disabled={
-                              signaturePending ||
-                              writePending ||
-                              txPending ||
-                              !isProcessor
-                            }
+                            disabled={writePending || txPending}
                             onClick={() => {
-                              handleProcess(commitmentDetails);
+                              handlePoke(commitmentDetails);
                             }}
                           >
-                            {(signaturePending ||
-                              writePending ||
-                              txPending) && (
+                            {(writePending || txPending) && (
                               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                             )}
 
-                            {!isProcessor
-                              ? 'Not a processor'
-                              : signaturePending
-                              ? 'Pending signature'
-                              : writePending || txPending
+                            {writePending || txPending
                               ? 'Pending transaction'
-                              : 'Process'}
+                              : 'Poke'}
                           </Button>
                         )}
                       </AlertDialogFooter>
@@ -380,7 +336,7 @@ export function ProcessorForm({ isProcessor }) {
 
       {!loading && proposals.length == 0 && (
         <div className='h-96 flex flex-row items-center justify-center'>
-          <p className='ml-2 text-muted-foreground'>No proposals to process.</p>
+          <p className='ml-2 text-muted-foreground'>No proposals to poke.</p>
         </div>
       )}
 
