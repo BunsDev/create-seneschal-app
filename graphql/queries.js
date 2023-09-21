@@ -36,6 +36,7 @@ export const GetSponsoredProposals = gql`
         sponsoredTime
         expirationTime
         contextURL
+        metadata
         recipient
         extraRewardToken
       }
@@ -60,6 +61,7 @@ export const GetProcessedProposals = gql`
         sponsoredTime
         expirationTime
         contextURL
+        metadata
         recipient
         extraRewardToken
       }

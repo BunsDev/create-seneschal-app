@@ -20,16 +20,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
+import { formatEther } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { ImageOff } from 'lucide-react';
 import { getAccountString } from '@/lib/helpers';
-import { Badge } from '@/components/ui/badge';
 
 import { useQuery } from '@apollo/client';
 import { GetProcessedProposals } from '@/graphql/queries';
 import { useState } from 'react';
-import { useRedis } from '@/hooks/useRedis';
+
 import {
   useSignTypedData,
   useWaitForTransaction,
@@ -39,27 +39,35 @@ import {
 
 import axios from 'axios';
 
+import { CountdownTimer } from './CountdownTimer';
 import { getTypes } from '@/lib/helpers';
 import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
 export function RecipientForm() {
   const { address } = useAccount();
-  const [decoded, setDecoded] = useState({});
   const [commitment, setCommitment] = useState('');
   const [txSuccess, setTxSuccess] = useState(false);
   const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const { toast } = useToast();
-  const { loading, refetch } = useQuery(GetProcessedProposals, {
-    onCompleted: (data) => setProposals(data.proposals)
+  const { refetch } = useQuery(GetProcessedProposals, {
+    onCompleted: (data) => decodeHash(data.proposals)
   });
-  const { getMeta } = useRedis();
 
   const { signTypedData, isLoading: signaturePending } = useSignTypedData({
     onSuccess(signature) {
       write({
         args: [commitment, signature]
+      });
+    },
+    onError(err) {
+      console.log(err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Function call failed.'
       });
     }
   });
@@ -108,45 +116,40 @@ export function RecipientForm() {
       setCommitment('');
       setTxSuccess(true);
       let data = await refetch();
-      setProposals(data.data.proposals);
+      decodeHash(data.data.proposals);
     }
   });
 
-  const decodeHash = async (proposal) => {
-    let ipfsHash = await getMeta(proposal.id);
-    if (ipfsHash) {
-      let { data } = await axios.get(
-        `https://seneschal-silverdoor.infura-ipfs.io/ipfs/${ipfsHash}`
-      );
+  const decodeHash = async (_proposals) => {
+    let formattedProposals = _proposals;
 
-      setDecoded((prevDecoded) => ({
-        ...prevDecoded,
-        [proposal.id]: {
-          meta: data,
-          commitment: proposal.commitmentDetails
-        }
-      }));
-    } else {
-      setDecoded((prevDecoded) => ({
-        ...prevDecoded,
-        [proposal.id]: {
-          meta: null,
-          commitment: proposal.commitmentDetails
-        }
-      }));
+    for (let i = 0; i < formattedProposals.length; i++) {
+      try {
+        let { data } = await axios.get(
+          `https://seneschal-silverdoor.infura-ipfs.io/ipfs/${formattedProposals[i].commitmentDetails.metadata}`
+        );
+
+        // Update the proposal object with the fetched metadata.
+        formattedProposals[i].metadata = data;
+      } catch (error) {
+        console.log(error);
+      }
     }
+    setProposals(formattedProposals);
+    setLoading(false);
   };
 
-  const handleProcess = async (_commitment) => {
+  const handleClaim = async (_commitment) => {
     let commitmentArray = [
       Number(_commitment.eligibleHat),
       Number(_commitment.shares),
-      Number(_commitment.loot),
+      _commitment.loot,
       Number(_commitment.extraRewardAmount),
       Number(_commitment.timeFactor),
       Number(_commitment.sponsoredTime),
       Number(_commitment.expirationTime),
       _commitment.contextURL,
+      _commitment.metadata,
       _commitment.recipient,
       _commitment.extraRewardToken
     ];
@@ -168,63 +171,56 @@ export function RecipientForm() {
       {!loading && proposals.length > 0 && (
         <div className='grid grid-cols-3 gap-10 mt-12'>
           {proposals.map((proposal, index) => {
-            let contextURL = proposal.commitmentDetails.contextURL;
-            let proposalId = proposal.id;
-            let proposalImage =
-              decoded[proposalId]?.['meta']?.['proposalImage'];
-            let loot = proposal.commitmentDetails.loot;
-            let recipient = proposal.recipient;
-            let sponsoredTime = new Date(
-              Number(proposal.commitmentDetails.sponsoredTime * 1000)
-            ).toDateString();
-            let processedTime = new Date(
-              Number(proposal.processingDetails.blockTimestamp) * 1000
-            ).toDateString();
-            let expiryTime = new Date(
-              Number(proposal.commitmentDetails.expirationTime) * 1000
-            ).toDateString();
-            let proposalSummary =
-              decoded[proposalId]?.['meta']?.['proposalSummary'];
-            let commitmentDetails = proposal.commitmentDetails;
             let isExpired =
               Number(proposal.commitmentDetails.expirationTime) <
               Math.round(Date.now() / 1000);
+
+            let contextURL = proposal.commitmentDetails.contextURL;
+            let proposalId = proposal.id;
+            let proposalImage = proposal.metadata.proposalImage;
+            let loot = formatEther(proposal.commitmentDetails.loot);
+            let recipient = proposal.recipient;
+            let sponsoredTime = new Date(
+              Number(proposal.commitmentDetails.sponsoredTime * 1000)
+            ).toLocaleString();
+            let processedTime = new Date(
+              Number(proposal.processingDetails.blockTimestamp) * 1000
+            ).toLocaleString();
+            let expiryTime = new Date(
+              Number(proposal.commitmentDetails.expirationTime) * 1000
+            ).toLocaleString();
+            let proposalTitle =
+              proposal.metadata.proposalTitle ||
+              `SDS #${proposalId
+                .substring(proposalId.length - 4)
+                .toUpperCase()}`;
+            let proposalSummary = proposal.metadata.proposalSummary;
+            let commitmentDetails = proposal.commitmentDetails;
+
             return (
               <Card key={index}>
                 <CardHeader>
                   <div
-                    className='flex flex-row items-center cursor-pointer hover:underline'
+                    className='flex flex-row items-center justify-between mb-2'
                     onClick={() => window.open(contextURL, '_blank')}
                   >
-                    <CardTitle className='mr-2'>{`SDS #${proposal.id
-                      .substring(proposal.id.length - 4)
-                      .toUpperCase()}`}</CardTitle>
-                    <ExternalLink className='w-4 h-4' />
-                  </div>
+                    <div className='flex flex-row items-center cursor-pointer underline '>
+                      <CardTitle className='mr-2'>{proposalTitle}</CardTitle>
+                      <ExternalLink className='w-4 h-4' />
+                    </div>
 
-                  <Badge
-                    variant='outline'
-                    className={`w-fit rounded-sm text-white ${
-                      isExpired ? 'bg-red-500' : 'bg-green-500'
-                    }`}
-                  >
-                    {isExpired ? `Expired on ${expiryTime}` : 'Ready to claim'}
-                  </Badge>
+                    <CountdownTimer
+                      timeFactor={Number(
+                        proposal.commitmentDetails.expirationTime
+                      )}
+                      delay={0}
+                    />
+                  </div>
 
                   <CardDescription>
                     <div className='relative'>
                       <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg'>
-                        {!(proposalId in decoded) && (
-                          <Button
-                            variant='outline'
-                            className='right-0 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2'
-                            onClick={() => decodeHash(proposal)}
-                          >
-                            Decode Hash
-                          </Button>
-                        )}
-
-                        {!(proposalId in decoded) ? null : proposalImage ? (
+                        {proposalImage ? (
                           <img
                             id='preview_img'
                             className='h-32 w-full object-cover'
@@ -286,6 +282,15 @@ export function RecipientForm() {
                       <p className='text-sm font-medium '>{processedTime}</p>
                     </div>
                   </div>
+
+                  <div>
+                    <div className='space-y-1'>
+                      <p className='text-xs text-muted-foreground'>
+                        Cannot claim after
+                      </p>
+                      <p className='text-sm font-medium '>{expiryTime}</p>
+                    </div>
+                  </div>
                 </CardContent>
 
                 <CardFooter>
@@ -293,7 +298,6 @@ export function RecipientForm() {
                     onOpenChange={(e) => {
                       if (!e && txSuccess) {
                         setTxSuccess(false);
-                        setDecoded({});
                       }
                     }}
                   >
@@ -302,7 +306,6 @@ export function RecipientForm() {
                         className='w-full'
                         variant={isExpired ? 'outline' : 'default'}
                         disabled={
-                          !(proposalId in decoded) ||
                           isExpired ||
                           address.toLowerCase() !== recipient.toLowerCase()
                         }
@@ -315,11 +318,7 @@ export function RecipientForm() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {`SDS #${proposalId
-                            .substring(proposalId.length - 4)
-                            .toUpperCase()}`}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>{proposalTitle}</AlertDialogTitle>
                         <AlertDialogDescription>
                           {proposalSummary
                             ? proposalSummary
@@ -332,14 +331,14 @@ export function RecipientForm() {
                             signaturePending || writePending || txPending
                           }
                         >
-                          {!txSuccess && decoded ? 'Cancel' : 'Close'}
+                          {!txSuccess ? 'Cancel' : 'Close'}
                         </AlertDialogCancel>
-                        {!txSuccess && decoded && (
+                        {!txSuccess && (
                           <Button
                             disabled={
                               signaturePending || writePending || txPending
                             }
-                            onClick={() => handleProcess(commitmentDetails)}
+                            onClick={() => handleClaim(commitmentDetails)}
                           >
                             {(signaturePending ||
                               writePending ||

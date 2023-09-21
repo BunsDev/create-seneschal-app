@@ -42,6 +42,24 @@
   { "inputs": [], "name": "InvalidMagicValue", "type": "error" },
   { "inputs": [], "name": "InvalidPoke", "type": "error" },
   { "inputs": [], "name": "InvalidSignature", "type": "error" },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "extraRewardToken",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "extraRewardAmount",
+        "type": "uint256"
+      },
+      { "internalType": "uint256", "name": "balance", "type": "uint256" },
+      { "internalType": "uint256", "name": "debt", "type": "uint256" }
+    ],
+    "name": "NoBalance",
+    "type": "error"
+  },
   { "inputs": [], "name": "NotApproved", "type": "error" },
   {
     "inputs": [
@@ -200,6 +218,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -298,6 +317,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -355,6 +375,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -404,6 +425,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -461,6 +483,13 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getClaimDelay",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "components": [
@@ -492,6 +521,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -541,6 +571,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -611,6 +642,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -665,6 +697,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -733,6 +766,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",

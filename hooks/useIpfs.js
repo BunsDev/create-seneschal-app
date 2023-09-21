@@ -8,6 +8,7 @@ export const useIpfs = () => {
     imgUrl,
     contextURL,
     arweaveTx,
+    proposalTitle,
     proposalSummary
   ) => {
     setIpfsUploading(true);
@@ -15,6 +16,7 @@ export const useIpfs = () => {
       imgUrl,
       contextURL,
       arweaveTx,
+      proposalTitle,
       proposalSummary
     );
     setIpfsUploading(false);
