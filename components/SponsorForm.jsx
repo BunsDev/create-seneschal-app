@@ -42,7 +42,7 @@ import { useProposal } from '@/hooks/useProposal';
 import { useIpfs } from '@/hooks/useIpfs';
 
 import { formatCommitment, getTypes } from '@/lib/helpers';
-import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+import { EXPLORER_BASE_URL, SENESCHAL_CONTRACT_ADDRESS } from '@/config';
 
 import SeneschalAbi from '../abis/Seneschal.json';
 
@@ -118,7 +118,7 @@ export function SponsorForm({ isSponsor, setTabValue }) {
           <ToastAction
             altText='View Tx'
             onClick={() =>
-              window.open(`https://gnosisscan.io/tx/${data.hash}`, '_blank')
+              window.open(`${EXPLORER_BASE_URL}/tx/${data.hash}`, '_blank')
             }
           >
             View Tx
@@ -159,7 +159,7 @@ export function SponsorForm({ isSponsor, setTabValue }) {
         title: 'Success',
         description: 'Proposal sponsored.'
       });
-      setTabValue('processor');
+      setTabValue('witness');
     }
   });
 
@@ -322,7 +322,7 @@ export function SponsorForm({ isSponsor, setTabValue }) {
                   render={({ field }) => (
                     <FormItem className='flex flex-col justify-start'>
                       <FormLabel className='font-bold'>
-                        Processing Deadline
+                        Witness Deadline
                       </FormLabel>
                       <Popover className='mb-0 pb-0'>
                         <PopoverTrigger asChild>
@@ -356,7 +356,7 @@ export function SponsorForm({ isSponsor, setTabValue }) {
                         </PopoverContent>
                       </Popover>
                       <FormDescription className='text-xs'>
-                        Date after which the commitment cannot be processed
+                        Date after which the commitment cannot be witnessed
                       </FormDescription>
                       <FormMessage />
                     </FormItem>

@@ -19,12 +19,12 @@ export const GetMirrorTransactions = gql`
   }
 `;
 
-export const GetSponsoredProposals = gql`
+export const GetProposals = gql`
   query {
     proposals {
       id
       sponsor
-      processor
+      witness
       recipient
       status
       commitmentDetails {
@@ -44,12 +44,12 @@ export const GetSponsoredProposals = gql`
   }
 `;
 
-export const GetProcessedProposals = gql`
+export const GetWitnessedProposals = gql`
   query {
-    proposals(where: { status: Processed }) {
+    proposals(where: { status: Witnessed }) {
       id
       sponsor
-      processor
+      witness
       recipient
       status
       commitmentDetails {
@@ -65,7 +65,7 @@ export const GetProcessedProposals = gql`
         recipient
         extraRewardToken
       }
-      processingDetails {
+      witnessingDetails {
         blockTimestamp
       }
     }

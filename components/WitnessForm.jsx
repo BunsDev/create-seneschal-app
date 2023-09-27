@@ -25,9 +25,9 @@ import { ToastAction } from '@/components/ui/toast';
 import { ImageOff, Stamp, Loader2, ExternalLink } from 'lucide-react';
 import { getAccountString } from '@/lib/helpers';
 
-import { useQuery } from '@apollo/client';
-import { GetSponsoredProposals } from '@/graphql/queries';
-import { useState } from 'react';
+import { useQuery, useLazyQuery } from '@apollo/client';
+import { GetProposals } from '@/graphql/queries';
+import { useEffect, useState } from 'react';
 import {
   useSignTypedData,
   useWaitForTransaction,
@@ -40,10 +40,14 @@ import axios from 'axios';
 
 import { CountdownTimer } from './CountdownTimer';
 import { getTypes } from '@/lib/helpers';
-import { IPFS_BASE_GATEWAY, SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+import {
+  EXPLORER_BASE_URL,
+  IPFS_BASE_GATEWAY,
+  SENESCHAL_CONTRACT_ADDRESS
+} from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
-export function ProcessorForm({ isProcessor }) {
+export function WitnessForm({ isWitness }) {
   const { address } = useAccount();
 
   const [commitment, setCommitment] = useState('');
@@ -53,10 +57,20 @@ export function ProcessorForm({ isProcessor }) {
 
   const { toast } = useToast();
 
-  const { refetch } = useQuery(GetSponsoredProposals, {
+  const { refetch } = useQuery(GetProposals, {
     onCompleted: (data) => decodeHash(data.proposals)
-    // pollInterval: 270000
   });
+
+  const [
+    getProposalRefetch,
+    { data: refetchProposalData, loading: refetchLoading }
+  ] = useLazyQuery(GetProposals);
+
+  useEffect(() => {
+    if (refetchProposalData) {
+      decodeHash(refetchProposalData.proposals);
+    }
+  }, [refetchProposalData]);
 
   const { signTypedData, isLoading: signaturePending } = useSignTypedData({
     onSuccess(signature) {
@@ -87,7 +101,7 @@ export function ProcessorForm({ isProcessor }) {
   } = useContractWrite({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
-    functionName: 'process',
+    functionName: 'witness',
     onSuccess(data) {
       toast({
         title: 'Mining Transaction',
@@ -96,7 +110,7 @@ export function ProcessorForm({ isProcessor }) {
           <ToastAction
             altText='View Tx'
             onClick={() =>
-              window.open(`https://gnosisscan.io/tx/${data.hash}`, '_blank')
+              window.open(`${EXPLORER_BASE_URL}/tx/${data.hash}`, '_blank')
             }
           >
             View Tx
@@ -119,7 +133,7 @@ export function ProcessorForm({ isProcessor }) {
     async onSuccess() {
       toast({
         title: 'Success',
-        description: 'Proposal processed.'
+        description: 'Proposal witnessed.'
       });
       setCommitment('');
       setTxSuccess(true);
@@ -149,7 +163,7 @@ export function ProcessorForm({ isProcessor }) {
     setLoading(false);
   };
 
-  const handleProcess = async (_commitment) => {
+  const handleWitness = async (_commitment) => {
     let commitmentArray = [
       Number(_commitment.eligibleHat),
       Number(_commitment.shares),
@@ -276,7 +290,7 @@ export function ProcessorForm({ isProcessor }) {
                           className='text-sm font-medium cursor-pointer underline hover:opacity-95'
                           onClick={() =>
                             window.open(
-                              `https://gnosisscan.io/address/${recipient}`,
+                              `${EXPLORER_BASE_URL}/address/${recipient}`,
                               '_blank'
                             )
                           }
@@ -301,7 +315,7 @@ export function ProcessorForm({ isProcessor }) {
                     <div className='mt-4'>
                       <div className='space-y-1'>
                         <p className='text-xs text-muted-foreground'>
-                          Cannot be processed after
+                          Cannot be witnessed after
                         </p>
                         <p className='text-xs font-medium '>{timeFactor}</p>
                       </div>
@@ -324,7 +338,7 @@ export function ProcessorForm({ isProcessor }) {
                         disabled={isEarly}
                       >
                         <Stamp className='mr-2 h-4 w-4' />
-                        Process
+                        Verify
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -350,10 +364,10 @@ export function ProcessorForm({ isProcessor }) {
                               signaturePending ||
                               writePending ||
                               txPending ||
-                              !isProcessor
+                              !isWitness
                             }
                             onClick={() => {
-                              handleProcess(commitmentDetails);
+                              handleWitness(commitmentDetails);
                             }}
                           >
                             {(signaturePending ||
@@ -362,13 +376,13 @@ export function ProcessorForm({ isProcessor }) {
                               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                             )}
 
-                            {!isProcessor
-                              ? 'Not a processor'
+                            {!isWitness
+                              ? 'Not a witness'
                               : signaturePending
                               ? 'Pending signature'
                               : writePending || txPending
                               ? 'Pending transaction'
-                              : 'Process'}
+                              : 'Verify'}
                           </Button>
                         )}
                       </AlertDialogFooter>
@@ -381,16 +395,20 @@ export function ProcessorForm({ isProcessor }) {
         </div>
       )}
 
-      {!loading && proposals.length == 0 && (
-        <div className='h-96 flex flex-row items-center justify-center'>
-          <p className='ml-2 text-muted-foreground'>No proposals to process.</p>
+      {!loading && !refetchLoading && proposals.length == 0 && (
+        <div className='h-96 flex flex-col items-center justify-center'>
+          <Button variant='outline' onClick={() => getProposalRefetch()}>
+            No proposals to witness. Refresh?
+          </Button>
         </div>
       )}
 
-      {(loading || !proposals) && (
-        <div className='h-96 flex flex-row items-center justify-center'>
-          <Loader2 className='h-4 w-4 animate-spin' />
-          <p className='ml-2 text-muted-foreground'>Fetching proposals..</p>
+      {(loading || refetchLoading || !proposals) && (
+        <div className='h-96 flex flex-col items-center justify-center'>
+          <Button variant='outline' disabled>
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            Fetching proposals. Please wait
+          </Button>
         </div>
       )}
     </div>

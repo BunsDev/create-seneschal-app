@@ -32,7 +32,12 @@ export default function RootLayout({ children }) {
     <html lang='en'>
       <body className={inter.className}>
         <WagmiConfig config={wagmiConfig}>
-          {children}
+          <div className='hidden lg:block'>{children}</div>
+          <div className='flex lg:hidden min-h-screen flex-col justify-center'>
+            <p className='text-sm opacity-50 px-24 py-12 text-center'>
+              Seneschal is not yet available for smaller screen sizes.
+            </p>
+          </div>
           <Toaster />
         </WagmiConfig>
         <Web3Modal projectId={projectId} ethereumClient={ethereumClient} />

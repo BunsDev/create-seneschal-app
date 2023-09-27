@@ -25,9 +25,9 @@ import { ToastAction } from '@/components/ui/toast';
 import { Loader2, ExternalLink, ImageOff, Gem } from 'lucide-react';
 import { getAccountString } from '@/lib/helpers';
 
-import { useQuery } from '@apollo/client';
-import { GetProcessedProposals } from '@/graphql/queries';
-import { useState } from 'react';
+import { useQuery, useLazyQuery } from '@apollo/client';
+import { GetWitnessedProposals } from '@/graphql/queries';
+import { useState, useEffect } from 'react';
 
 import {
   useSignTypedData,
@@ -40,7 +40,11 @@ import axios from 'axios';
 
 import { CountdownTimer } from './CountdownTimer';
 import { getTypes } from '@/lib/helpers';
-import { IPFS_BASE_GATEWAY, SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+import {
+  EXPLORER_BASE_URL,
+  IPFS_BASE_GATEWAY,
+  SENESCHAL_CONTRACT_ADDRESS
+} from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
 export function RecipientForm() {
@@ -51,9 +55,20 @@ export function RecipientForm() {
   const [loading, setLoading] = useState(true);
 
   const { toast } = useToast();
-  const { refetch } = useQuery(GetProcessedProposals, {
+  const { refetch } = useQuery(GetWitnessedProposals, {
     onCompleted: (data) => decodeHash(data.proposals)
   });
+
+  const [
+    getProposalRefetch,
+    { data: refetchProposalData, loading: refetchLoading }
+  ] = useLazyQuery(GetWitnessedProposals);
+
+  useEffect(() => {
+    if (refetchProposalData) {
+      decodeHash(refetchProposalData.proposals);
+    }
+  }, [refetchProposalData]);
 
   const { signTypedData, isLoading: signaturePending } = useSignTypedData({
     onSuccess(signature) {
@@ -87,7 +102,7 @@ export function RecipientForm() {
           <ToastAction
             altText='View Tx'
             onClick={() =>
-              window.open(`https://gnosisscan.io/tx/${data.hash}`, '_blank')
+              window.open(`${EXPLORER_BASE_URL}/tx/${data.hash}`, '_blank')
             }
           >
             View Tx
@@ -110,7 +125,7 @@ export function RecipientForm() {
     async onSuccess() {
       toast({
         title: 'Success',
-        description: 'Proposal processed.'
+        description: 'Proposal witnessed.'
       });
       setCommitment('');
       setTxSuccess(true);
@@ -182,8 +197,8 @@ export function RecipientForm() {
             let sponsoredTime = new Date(
               Number(proposal.commitmentDetails.sponsoredTime * 1000)
             ).toLocaleString();
-            let processedTime = new Date(
-              Number(proposal.processingDetails.blockTimestamp) * 1000
+            let witnessedTime = new Date(
+              Number(proposal.witnessingDetails.blockTimestamp) * 1000
             ).toLocaleString();
             let expiryTime = new Date(
               Number(proposal.commitmentDetails.expirationTime) * 1000
@@ -254,7 +269,7 @@ export function RecipientForm() {
                           className='text-sm font-medium cursor-pointer underline hover:opacity-95'
                           onClick={() =>
                             window.open(
-                              `https://gnosisscan.io/address/${recipient}`,
+                              `${EXPLORER_BASE_URL}/address/${recipient}`,
                               '_blank'
                             )
                           }
@@ -279,9 +294,9 @@ export function RecipientForm() {
                   <div>
                     <div className='space-y-1'>
                       <p className='text-xs text-muted-foreground'>
-                        Processed on
+                        Witnessed on
                       </p>
-                      <p className='text-sm font-medium '>{processedTime}</p>
+                      <p className='text-sm font-medium '>{witnessedTime}</p>
                     </div>
                   </div>
 
@@ -365,16 +380,20 @@ export function RecipientForm() {
         </div>
       )}
 
-      {!loading && proposals.length == 0 && (
-        <div className='h-96 flex flex-row items-center justify-center'>
-          <p className='ml-2 text-muted-foreground'>No proposals to claim.</p>
+      {!loading && !refetchLoading && proposals.length == 0 && (
+        <div className='h-96 flex flex-col items-center justify-center'>
+          <Button variant='outline' onClick={() => getProposalRefetch()}>
+            No proposals to claim. Refresh?
+          </Button>
         </div>
       )}
 
-      {(loading || !proposals) && (
-        <div className='h-96 flex flex-row items-center justify-center'>
-          <Loader2 className='h-4 w-4 animate-spin' />
-          <p className='ml-2 text-muted-foreground'>Fetching proposals..</p>
+      {(loading || refetchLoading || !proposals) && (
+        <div className='h-96 flex flex-col items-center justify-center'>
+          <Button variant='outline' disabled>
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            Fetching proposals. Please wait
+          </Button>
         </div>
       )}
     </div>

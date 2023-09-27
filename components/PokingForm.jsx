@@ -19,15 +19,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
 import { ConciergeBell } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { Loader2, ExternalLink, ImageOff } from 'lucide-react';
-import { getAccountString } from '@/lib/helpers';
+import { getAccountString, getArweaveTxId } from '@/lib/helpers';
 
-import { useQuery } from '@apollo/client';
-import { GetSponsoredProposals } from '@/graphql/queries';
-import { useState } from 'react';
+import { useQuery, useLazyQuery } from '@apollo/client';
+import { GetProposals } from '@/graphql/queries';
+import { useState, useEffect } from 'react';
 import {
   useWaitForTransaction,
   useContractWrite,
@@ -38,7 +39,11 @@ import { formatEther, keccak256 } from 'viem';
 import axios from 'axios';
 
 import { CountdownTimer } from './CountdownTimer';
-import { IPFS_BASE_GATEWAY, SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+import {
+  EXPLORER_BASE_URL,
+  IPFS_BASE_GATEWAY,
+  SENESCHAL_CONTRACT_ADDRESS
+} from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
 export function PokingForm() {
@@ -49,10 +54,21 @@ export function PokingForm() {
 
   const { toast } = useToast();
 
-  const { refetch } = useQuery(GetSponsoredProposals, {
+  const { refetch } = useQuery(GetProposals, {
     onCompleted: (data) => decodeHash(data.proposals)
     // pollInterval: 270000
   });
+
+  const [
+    getProposalRefetch,
+    { data: refetchProposalData, loading: refetchLoading }
+  ] = useLazyQuery(GetProposals);
+
+  useEffect(() => {
+    if (refetchProposalData) {
+      decodeHash(refetchProposalData.proposals);
+    }
+  }, [refetchProposalData]);
 
   const { data: claimDelay } = useContractRead({
     address: SENESCHAL_CONTRACT_ADDRESS,
@@ -76,7 +92,7 @@ export function PokingForm() {
           <ToastAction
             altText='View Tx'
             onClick={() =>
-              window.open(`https://gnosisscan.io/tx/${data.hash}`, '_blank')
+              window.open(`${EXPLORER_BASE_URL}/tx/${data.hash}`, '_blank')
             }
           >
             View Tx
@@ -143,8 +159,16 @@ export function PokingForm() {
       _commitment.extraRewardToken
     ];
 
+    let arweaveResult = await getArweaveTxId(
+      _commitment.contextURL.substring(
+        _commitment.contextURL.lastIndexOf('/') + 1
+      )
+    );
+
+    let completionReportTxId = arweaveResult.transactions.edges[0].node.id;
+
     write({
-      args: [commitmentArray, keccak256(_commitment.metadata)]
+      args: [commitmentArray, keccak256(completionReportTxId)]
     });
   };
 
@@ -237,7 +261,7 @@ export function PokingForm() {
                           className='text-sm font-medium cursor-pointer underline hover:opacity-95'
                           onClick={() =>
                             window.open(
-                              `https://gnosisscan.io/address/${recipient}`,
+                              `${EXPLORER_BASE_URL}/address/${recipient}`,
                               '_blank'
                             )
                           }
@@ -262,7 +286,7 @@ export function PokingForm() {
                     <div className='mt-4'>
                       <div className='space-y-1'>
                         <p className='text-xs text-muted-foreground'>
-                          Cannot be processed after
+                          Cannot be witnessed after
                         </p>
                         <p className='text-xs font-medium '>{timeFactor}</p>
                       </div>
@@ -302,9 +326,37 @@ export function PokingForm() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>{proposalTitle}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {proposalSummary
-                            ? proposalSummary
-                            : 'No proposal summary found.'}
+                          <div>
+                            <p>
+                              {proposalSummary
+                                ? proposalSummary
+                                : 'No proposal summary found.'}
+                            </p>
+                            <div className='flex flex-col mt-4'>
+                              <p className='mb-2 text-sm font-semibold'>
+                                Completion Report
+                              </p>
+                              <div>
+                                <Input
+                                  className='mb-2'
+                                  disabled
+                                  value={contextURL}
+                                />
+                                <p className='text-xs text-muted-foreground mb-4'>
+                                  Make sure to update the proposal article with
+                                  updates before poking.
+                                </p>
+                                <Button
+                                  variant='secondary'
+                                  onClick={() =>
+                                    window.open(contextURL, '_blank')
+                                  }
+                                >
+                                  View proposal
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -337,16 +389,20 @@ export function PokingForm() {
         </div>
       )}
 
-      {!loading && proposals.length == 0 && (
-        <div className='h-96 flex flex-row items-center justify-center'>
-          <p className='ml-2 text-muted-foreground'>No proposals to poke.</p>
+      {!loading && !refetchLoading && proposals.length == 0 && (
+        <div className='h-96 flex flex-col items-center justify-center'>
+          <Button variant='outline' onClick={() => getProposalRefetch()}>
+            No proposals to poke. Refresh?
+          </Button>
         </div>
       )}
 
-      {(loading || !proposals) && (
-        <div className='h-96 flex flex-row items-center justify-center'>
-          <Loader2 className='h-4 w-4 animate-spin' />
-          <p className='ml-2 text-muted-foreground'>Fetching proposals..</p>
+      {(loading || refetchLoading || !proposals) && (
+        <div className='h-96 flex flex-col items-center justify-center'>
+          <Button variant='outline' disabled>
+            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            Fetching proposals. Please wait
+          </Button>
         </div>
       )}
     </div>
