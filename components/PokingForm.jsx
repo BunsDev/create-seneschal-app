@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { ConciergeBell } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Loader2, ExternalLink, ImageOff } from 'lucide-react';
+import { Loader2, ExternalLink, ImageOff, RotateCw } from 'lucide-react';
 import { getAccountString, getArweaveTxId } from '@/lib/helpers';
 
 import { useQuery, useLazyQuery } from '@apollo/client';
@@ -35,7 +35,7 @@ import {
   useContractRead,
   useAccount
 } from 'wagmi';
-import { formatEther, keccak256 } from 'viem';
+import { formatEther } from 'viem';
 import axios from 'axios';
 
 import { CountdownTimer } from './CountdownTimer';
@@ -168,13 +168,22 @@ export function PokingForm() {
     let completionReportTxId = arweaveResult.transactions.edges[0].node.id;
 
     write({
-      args: [commitmentArray, keccak256(completionReportTxId)]
+      args: [commitmentArray, completionReportTxId]
     });
   };
 
   return (
     <div>
-      {!loading && proposals.length > 0 && (
+      <Button
+        className='mt-2'
+        variant='outline'
+        disabled={refetchLoading || loading}
+        onClick={() => getProposalRefetch()}
+      >
+        <RotateCw className='mr-2 h-4 w-4' /> Refresh
+      </Button>
+
+      {!loading && !refetchLoading && proposals.length > 0 && (
         <div className='grid grid-cols-3 gap-10 mt-12'>
           {proposals.map((proposal, index) => {
             let isEarly =
@@ -389,20 +398,16 @@ export function PokingForm() {
         </div>
       )}
 
-      {!loading && !refetchLoading && proposals.length == 0 && (
-        <div className='h-96 flex flex-col items-center justify-center'>
-          <Button variant='outline' onClick={() => getProposalRefetch()}>
-            No proposals to poke. Refresh?
-          </Button>
+      {(loading || refetchLoading || !proposals) && (
+        <div className='h-96 flex flex-row items-center justify-center'>
+          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          <p>Fetching proposals. Please wait</p>
         </div>
       )}
 
-      {(loading || refetchLoading || !proposals) && (
-        <div className='h-96 flex flex-col items-center justify-center'>
-          <Button variant='outline' disabled>
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            Fetching proposals. Please wait
-          </Button>
+      {!loading && !refetchLoading && proposals.length == 0 && (
+        <div className='h-96 flex flex-row items-center justify-center'>
+          <p>No proposals to poke.</p>
         </div>
       )}
     </div>

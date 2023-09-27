@@ -22,7 +22,7 @@ import {
 
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { ImageOff, Stamp, Loader2, ExternalLink } from 'lucide-react';
+import { ImageOff, Stamp, Loader2, ExternalLink, RotateCw } from 'lucide-react';
 import { getAccountString } from '@/lib/helpers';
 
 import { useQuery, useLazyQuery } from '@apollo/client';
@@ -192,7 +192,16 @@ export function WitnessForm({ isWitness }) {
 
   return (
     <div>
-      {!loading && proposals.length > 0 && (
+      <Button
+        className='mt-2'
+        variant='outline'
+        disabled={refetchLoading || loading}
+        onClick={() => getProposalRefetch()}
+      >
+        <RotateCw className='mr-2 h-4 w-4' /> Refresh
+      </Button>
+
+      {!loading && !refetchLoading && proposals.length > 0 && (
         <div className='grid grid-cols-3 gap-10 mt-12'>
           {proposals.map((proposal, index) => {
             let isEarly =
@@ -395,20 +404,16 @@ export function WitnessForm({ isWitness }) {
         </div>
       )}
 
-      {!loading && !refetchLoading && proposals.length == 0 && (
-        <div className='h-96 flex flex-col items-center justify-center'>
-          <Button variant='outline' onClick={() => getProposalRefetch()}>
-            No proposals to witness. Refresh?
-          </Button>
+      {(loading || refetchLoading || !proposals) && (
+        <div className='h-96 flex flex-row items-center justify-center'>
+          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          <p>Fetching proposals. Please wait</p>
         </div>
       )}
 
-      {(loading || refetchLoading || !proposals) && (
-        <div className='h-96 flex flex-col items-center justify-center'>
-          <Button variant='outline' disabled>
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            Fetching proposals. Please wait
-          </Button>
+      {!loading && !refetchLoading && proposals.length == 0 && (
+        <div className='h-96 flex flex-row items-center justify-center'>
+          <p>No proposals to witness.</p>
         </div>
       )}
     </div>

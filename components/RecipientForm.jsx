@@ -22,7 +22,7 @@ import {
 import { formatEther } from 'viem';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Loader2, ExternalLink, ImageOff, Gem } from 'lucide-react';
+import { Loader2, ExternalLink, ImageOff, Gem, RotateCw } from 'lucide-react';
 import { getAccountString } from '@/lib/helpers';
 
 import { useQuery, useLazyQuery } from '@apollo/client';
@@ -143,7 +143,6 @@ export function RecipientForm() {
           `${IPFS_BASE_GATEWAY}/${formattedProposals[i].commitmentDetails.metadata}`
         );
 
-        // Update the proposal object with the fetched metadata.
         formattedProposals[i].metadata = data;
       } catch (error) {
         console.log(error);
@@ -182,8 +181,17 @@ export function RecipientForm() {
 
   return (
     <div>
-      {!loading && proposals.length > 0 && (
-        <div className='grid grid-cols-3 gap-10 mt-12'>
+      <Button
+        className='mt-2'
+        variant='outline'
+        disabled={refetchLoading || loading}
+        onClick={() => getProposalRefetch()}
+      >
+        <RotateCw className='mr-2 h-4 w-4' /> Refresh
+      </Button>
+
+      {!loading && !refetchLoading && proposals.length > 0 && (
+        <div className='grid grid-cols-3 gap-10 mt-4'>
           {proposals.map((proposal, index) => {
             let isExpired =
               Number(proposal.commitmentDetails.expirationTime) <
@@ -380,20 +388,16 @@ export function RecipientForm() {
         </div>
       )}
 
-      {!loading && !refetchLoading && proposals.length == 0 && (
-        <div className='h-96 flex flex-col items-center justify-center'>
-          <Button variant='outline' onClick={() => getProposalRefetch()}>
-            No proposals to claim. Refresh?
-          </Button>
+      {(loading || refetchLoading || !proposals) && (
+        <div className='h-96 flex flex-row items-center justify-center'>
+          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          <p>Fetching proposals. Please wait</p>
         </div>
       )}
 
-      {(loading || refetchLoading || !proposals) && (
-        <div className='h-96 flex flex-col items-center justify-center'>
-          <Button variant='outline' disabled>
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            Fetching proposals. Please wait
-          </Button>
+      {!loading && !refetchLoading && proposals.length == 0 && (
+        <div className='h-96 flex flex-row items-center justify-center'>
+          <p>No proposals to claim.</p>
         </div>
       )}
     </div>
