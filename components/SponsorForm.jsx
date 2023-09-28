@@ -213,7 +213,7 @@ export function SponsorForm({ isSponsor, setTabValue }) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8 mt-12'>
+      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4 mt-12'>
         <div className='grid grid-cols-2 gap-5'>
           <FormField
             control={form.control}
@@ -471,39 +471,41 @@ export function SponsorForm({ isSponsor, setTabValue }) {
           </FormItem>
         </div>
 
-        <Button
-          type='submit'
-          disabled={
-            signaturePending ||
+        <div className='flex flex-col justify-end items-end'>
+          <Button
+            type='submit'
+            disabled={
+              signaturePending ||
+              writing ||
+              writePending ||
+              txPending ||
+              ipfsUploading ||
+              !isSponsor
+            }
+          >
+            {signaturePending ||
             writing ||
             writePending ||
             txPending ||
-            ipfsUploading ||
-            !isSponsor
-          }
-        >
-          {signaturePending ||
-          writing ||
-          writePending ||
-          txPending ||
-          ipfsUploading ? (
-            <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-          ) : (
-            <PenSquare className='h-4 w-4 mr-2' />
-          )}
+            ipfsUploading ? (
+              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+            ) : (
+              <PenSquare className='h-4 w-4 mr-2' />
+            )}
 
-          {!isSponsor
-            ? 'Not a Sponsor'
-            : signaturePending
-            ? 'Pending signature'
-            : ipfsUploading
-            ? 'Uploading to IPFS'
-            : writing
-            ? 'Summarizing'
-            : writePending || txPending
-            ? 'Pending transaction'
-            : 'Sponsor Proposal'}
-        </Button>
+            {!isSponsor
+              ? 'Not a Sponsor'
+              : signaturePending
+              ? 'Pending signature'
+              : ipfsUploading
+              ? 'Uploading to IPFS'
+              : writing
+              ? 'Summarizing'
+              : writePending || txPending
+              ? 'Pending transaction'
+              : 'Sponsor Proposal'}
+          </Button>
+        </div>
       </form>
     </Form>
   );

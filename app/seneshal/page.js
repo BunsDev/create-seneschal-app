@@ -72,10 +72,10 @@ export default function Home() {
   });
 
   return (
-    <main className='flex min-h-screen max-w-7xl flex-col items-center px-24 pt-12 pb-4 mx-auto'>
-      <div className='flex flex-row min-w-full justify-between items-center mb-10'>
+    <main className=' min-h-screen max-w-7xl grid grid-flow-row gap-4 px-24 pt-12 pb-4 mx-auto'>
+      <div className='flex flex-row min-w-full justify-between items-center'>
         <h2
-          className='scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0 cursor-pointer'
+          className='text-3xl font-semibold tracking-tight transition-colors cursor-pointer'
           onClick={() => router.push('/')}
         >
           The Seneschal
@@ -83,82 +83,84 @@ export default function Home() {
         <Web3Button />
       </div>
 
-      {!address ? (
-        <div className=' flex flex-col items-center lg:p-16 p-8 mt-auto mb-auto'>
-          <Wallet />
-          <p className='mt-4 text-sm opacity-50'>
-            Connect your wallet to authenticate.
-          </p>
-        </div>
-      ) : chain?.id != chains[0]?.id ? (
-        <div className=' flex flex-col items-center lg:p-16 p-8 mt-auto mb-auto'>
-          <Button
-            onClick={() => switchNetwork(chains[0]?.id)}
-            disabled={switchingNetwork}
+      <div className='min-h-[750px] border rounded bg-[#fafbfc] p-4'>
+        {!address ? (
+          <div className=' flex flex-col items-center lg:p-16 p-8 mt-auto mb-auto'>
+            <Wallet />
+            <p className='mt-4 text-sm opacity-50'>
+              Connect your wallet to authenticate.
+            </p>
+          </div>
+        ) : chain?.id != chains[0]?.id ? (
+          <div className=' flex flex-col items-center lg:p-16 p-8 mt-auto mb-auto'>
+            <Button
+              onClick={() => switchNetwork(chains[0]?.id)}
+              disabled={switchingNetwork}
+            >
+              {switchingNetwork && (
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+              )}
+              {switchingNetwork ? 'Switching to Gnosis..' : 'Switch to Gnosis'}
+            </Button>
+          </div>
+        ) : sponsorHatValidating || witnessHatValidating ? (
+          <div className='flex flex-row items-center justify-center'>
+            <Loader2 className='h-4 w-4 animate-spin' />
+            <p className='ml-2 text-muted-foreground'>Validating hats</p>
+          </div>
+        ) : (
+          <Tabs
+            defaultValue='sponsor'
+            value={tabValue}
+            onValueChange={(value) => setTabValue(value)}
+            className='w-full '
           >
-            {switchingNetwork && (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            )}
-            {switchingNetwork ? 'Switching to Gnosis..' : 'Switch to Gnosis'}
-          </Button>
-        </div>
-      ) : sponsorHatValidating || witnessHatValidating ? (
-        <div className='flex flex-row items-center justify-center'>
-          <Loader2 className='h-4 w-4 animate-spin' />
-          <p className='ml-2 text-muted-foreground'>Validating hats</p>
-        </div>
-      ) : (
-        <Tabs
-          defaultValue='sponsor'
-          value={tabValue}
-          onValueChange={(value) => setTabValue(value)}
-          className='w-full mb-4'
-        >
-          <TabsList className='w-full bg-slate-200 '>
-            <TabsTrigger value='sponsor' className='font-semibold'>
-              <PenSquare className='h-4 w-4 mr-2' /> <p>Sponsor</p>
-            </TabsTrigger>
-            <TabsTrigger value='witness' className='font-semibold'>
-              <Stamp className='h-4 w-4 mr-2' /> <p>Verify</p>
-            </TabsTrigger>
-            <TabsTrigger value='poking' className='font-semibold'>
-              <ConciergeBell className='h-4 w-4 mr-2' /> <p>Submit</p>
-            </TabsTrigger>
-            <TabsTrigger value='recipient' className='font-semibold'>
-              <Gem className='h-4 w-4 mr-2' /> <p>Claim</p>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value='sponsor'>
-            <ApolloProvider client={AREWEAVE_GRAPHQL_CLIENT}>
-              <SponsorForm isSponsor={isSponsor} setTabValue={setTabValue} />
-            </ApolloProvider>
-          </TabsContent>
+            <TabsList className='w-full bg-slate-200 '>
+              <TabsTrigger value='sponsor' className='font-semibold'>
+                <PenSquare className='h-4 w-4 mr-2' /> <p>Sponsor</p>
+              </TabsTrigger>
+              <TabsTrigger value='witness' className='font-semibold'>
+                <Stamp className='h-4 w-4 mr-2' /> <p>Verify</p>
+              </TabsTrigger>
+              <TabsTrigger value='poking' className='font-semibold'>
+                <ConciergeBell className='h-4 w-4 mr-2' /> <p>Submit</p>
+              </TabsTrigger>
+              <TabsTrigger value='recipient' className='font-semibold'>
+                <Gem className='h-4 w-4 mr-2' /> <p>Claim</p>
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value='sponsor'>
+              <ApolloProvider client={AREWEAVE_GRAPHQL_CLIENT}>
+                <SponsorForm isSponsor={isSponsor} setTabValue={setTabValue} />
+              </ApolloProvider>
+            </TabsContent>
 
-          <TabsContent value='witness'>
-            <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
-              <WitnessForm isWitness={isWitness} />
-            </ApolloProvider>
-          </TabsContent>
+            <TabsContent className='h-full overflow-y-scroll' value='witness'>
+              <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
+                <WitnessForm isWitness={isWitness} />
+              </ApolloProvider>
+            </TabsContent>
 
-          <TabsContent value='poking'>
-            <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
-              <PokingForm />
-            </ApolloProvider>
-          </TabsContent>
+            <TabsContent className='h-full overflow-y-scroll' value='poking'>
+              <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
+                <PokingForm />
+              </ApolloProvider>
+            </TabsContent>
 
-          <TabsContent value='recipient'>
-            <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
-              <RecipientForm />
-            </ApolloProvider>
-          </TabsContent>
-        </Tabs>
-      )}
+            <TabsContent className='h-full overflow-y-scroll' value='recipient'>
+              <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
+                <RecipientForm />
+              </ApolloProvider>
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
 
-      <div className='flex flex-row min-w-full justify-between items-center mt-auto'>
+      <div className='flex flex-row min-w-full justify-between items-center pt-8 mt-auto'>
         <a
           href='https://silverdoor.ai'
           target='_blank'
-          className='scroll-m-20 pb-2 text-xs font-semibold tracking-tight transition-colors first:mt-0 cursor-pointer'
+          className='scroll-m-20 text-xs font-semibold tracking-tight transition-colors first:mt-0 cursor-pointer'
         >
           Silverdoor @ 2023
         </a>

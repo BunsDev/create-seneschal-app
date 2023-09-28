@@ -14,26 +14,28 @@ export default function Home() {
   const router = useRouter();
 
   return (
-    <main className='flex min-h-screen max-w-7xl flex-col items-center px-24 pt-12 pb-4 mx-auto'>
+    <main className='min-h-screen grid grid-flow-row gap-4 max-w-7xl px-24 pt-12 pb-4 mx-auto'>
       <div className='flex flex-row min-w-full justify-between items-center'>
-        <h2 className='scroll-m-20 border-b text-3xl font-semibold tracking-tight transition-colors first:mt-0'>
+        <h2 className='text-3xl font-semibold tracking-tight transition-colors'>
           The Seneschal
         </h2>
         <Button onClick={() => router.push('/seneshal')}>Open app</Button>
       </div>
 
-      <p className='py-12 w-3/4 mr-auto text-muted-foreground'>
-        The seneschal shaman enables a high degree of agency for DAO operators
-        to grant shares, loot and rewards to value creating participants. It
-        enables piecemeal task to task incentives for DAO participants. It’s
-        entirely non-coersive; and useful for high-trust organizations.
-      </p>
+      <div className='min-h-[750px] border rounded bg-[#fafbfc] p-4'>
+        <p className='py-12 w-3/4 mr-auto text-muted-foreground '>
+          The seneschal shaman enables a high degree of agency for DAO operators
+          to grant shares, loot and rewards to value creating participants. It
+          enables piecemeal task to task incentives for DAO participants. It’s
+          entirely non-coersive; and useful for high-trust organizations.
+        </p>
 
-      <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
-        <Proposals />
-      </ApolloProvider>
+        <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
+          <Proposals />
+        </ApolloProvider>
+      </div>
 
-      <div className='flex flex-row min-w-full justify-between items-center mt-auto'>
+      <div className='flex flex-row min-w-full justify-between items-center'>
         <a
           href='https://silverdoor.ai'
           target='_blank'
