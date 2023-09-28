@@ -34,11 +34,30 @@ export default function Home() {
       </ApolloProvider>
 
       <div className='flex flex-row min-w-full justify-between items-center mt-auto'>
-        <p className='scroll-m-20 pb-2 text-xs font-semibold tracking-tight transition-colors first:mt-0'>
+        <a
+          href='https://silverdoor.ai'
+          target='_blank'
+          className='scroll-m-20 pb-2 text-xs font-semibold tracking-tight transition-colors first:mt-0 cursor-pointer'
+        >
           Silverdoor @ 2023
-        </p>
+        </a>
         <small className='text-xs font-medium leading-none text-muted-foreground'>
-          Built by Kyle & Saimano
+          Built by{' '}
+          <a
+            href='https://twitter.com/KyleSt4rgarden'
+            target='_blank'
+            className='cursor-pointer underline'
+          >
+            Kyle
+          </a>{' '}
+          &{' '}
+          <a
+            href='https://twitter.com/saimano1996'
+            target='_blank'
+            className='cursor-pointer underline'
+          >
+            Saimano
+          </a>
         </small>
       </div>
     </main>

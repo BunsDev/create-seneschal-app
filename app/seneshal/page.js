@@ -112,7 +112,7 @@ export default function Home() {
           defaultValue='sponsor'
           value={tabValue}
           onValueChange={(value) => setTabValue(value)}
-          className='w-full'
+          className='w-full mb-4'
         >
           <TabsList className='w-full bg-slate-200 '>
             <TabsTrigger value='sponsor' className='font-semibold'>
