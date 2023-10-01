@@ -1,7 +1,8 @@
+import { AREWEAVE_GRAPHQL_URI, SENESCHAL_GRAPHQL_URI } from '@/config';
 import { ApolloClient, InMemoryCache } from '@apollo/client';
 
 export const AREWEAVE_GRAPHQL_CLIENT = new ApolloClient({
-  uri: 'https://arweave.net/graphql',
+  uri: AREWEAVE_GRAPHQL_URI,
   cache: new InMemoryCache(),
   defaultOptions: {
     query: {
@@ -14,7 +15,7 @@ export const AREWEAVE_GRAPHQL_CLIENT = new ApolloClient({
 });
 
 export const SUBGRAPH_GRAPHQL_CLIENT = new ApolloClient({
-  uri: 'https://api.thegraph.com/subgraphs/name/manolingam/seneschal',
+  uri: SENESCHAL_GRAPHQL_URI,
   cache: new InMemoryCache(),
   defaultOptions: {
     query: {

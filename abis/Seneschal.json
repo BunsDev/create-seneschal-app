@@ -42,6 +42,24 @@
   { "inputs": [], "name": "InvalidMagicValue", "type": "error" },
   { "inputs": [], "name": "InvalidPoke", "type": "error" },
   { "inputs": [], "name": "InvalidSignature", "type": "error" },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "extraRewardToken",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "extraRewardAmount",
+        "type": "uint256"
+      },
+      { "internalType": "uint256", "name": "balance", "type": "uint256" },
+      { "internalType": "uint256", "name": "debt", "type": "uint256" }
+    ],
+    "name": "NoBalance",
+    "type": "error"
+  },
   { "inputs": [], "name": "NotApproved", "type": "error" },
   {
     "inputs": [
@@ -52,7 +70,7 @@
   },
   { "inputs": [], "name": "NotSponsored", "type": "error" },
   { "inputs": [], "name": "PokedEarly", "type": "error" },
-  { "inputs": [], "name": "ProcessedEarly", "type": "error" },
+  { "inputs": [], "name": "WitnessedEarly", "type": "error" },
   {
     "anonymous": false,
     "inputs": [
@@ -128,31 +146,12 @@
       },
       {
         "indexed": false,
-        "internalType": "bytes32",
+        "internalType": "string",
         "name": "completionReport",
-        "type": "bytes32"
+        "type": "string"
       }
     ],
     "name": "Poke",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "processor",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "bytes32",
-        "name": "commitmentHash",
-        "type": "bytes32"
-      }
-    ],
-    "name": "Processed",
     "type": "event"
   },
   {
@@ -200,6 +199,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -214,6 +214,25 @@
       }
     ],
     "name": "Sponsored",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "witness",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "commitmentHash",
+        "type": "bytes32"
+      }
+    ],
+    "name": "Witnessed",
     "type": "event"
   },
   {
@@ -298,6 +317,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -355,6 +375,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -404,6 +425,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -461,6 +483,13 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getClaimDelay",
+    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "components": [
@@ -492,6 +521,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -541,6 +571,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -560,14 +591,14 @@
   },
   {
     "inputs": [],
-    "name": "getProcessorHat",
+    "name": "getSponsorHat",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "pure",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getSponsorHat",
+    "name": "getWitnessHat",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
     "stateMutability": "pure",
     "type": "function"
@@ -611,6 +642,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -622,63 +654,9 @@
         "name": "commitment",
         "type": "tuple"
       },
-      {
-        "internalType": "bytes32",
-        "name": "completionReport",
-        "type": "bytes32"
-      }
+      { "internalType": "string", "name": "completionReport", "type": "string" }
     ],
     "name": "poke",
-    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint256",
-            "name": "eligibleHat",
-            "type": "uint256"
-          },
-          { "internalType": "uint256", "name": "shares", "type": "uint256" },
-          { "internalType": "uint256", "name": "loot", "type": "uint256" },
-          {
-            "internalType": "uint256",
-            "name": "extraRewardAmount",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timeFactor",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "sponsoredTime",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "expirationTime",
-            "type": "uint256"
-          },
-          { "internalType": "string", "name": "contextURL", "type": "string" },
-          { "internalType": "address", "name": "recipient", "type": "address" },
-          {
-            "internalType": "address",
-            "name": "extraRewardToken",
-            "type": "address"
-          }
-        ],
-        "internalType": "struct Commitment",
-        "name": "commitment",
-        "type": "tuple"
-      },
-      { "internalType": "bytes", "name": "signature", "type": "bytes" }
-    ],
-    "name": "process",
     "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -733,6 +711,7 @@
             "type": "uint256"
           },
           { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
           { "internalType": "address", "name": "recipient", "type": "address" },
           {
             "internalType": "address",
@@ -763,6 +742,57 @@
     "name": "version_",
     "outputs": [{ "internalType": "string", "name": "", "type": "string" }],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "eligibleHat",
+            "type": "uint256"
+          },
+          { "internalType": "uint256", "name": "shares", "type": "uint256" },
+          { "internalType": "uint256", "name": "loot", "type": "uint256" },
+          {
+            "internalType": "uint256",
+            "name": "extraRewardAmount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timeFactor",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "sponsoredTime",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "expirationTime",
+            "type": "uint256"
+          },
+          { "internalType": "string", "name": "contextURL", "type": "string" },
+          { "internalType": "string", "name": "metadata", "type": "string" },
+          { "internalType": "address", "name": "recipient", "type": "address" },
+          {
+            "internalType": "address",
+            "name": "extraRewardToken",
+            "type": "address"
+          }
+        ],
+        "internalType": "struct Commitment",
+        "name": "commitment",
+        "type": "tuple"
+      },
+      { "internalType": "bytes", "name": "signature", "type": "bytes" }
+    ],
+    "name": "witness",
+    "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+    "stateMutability": "nonpayable",
     "type": "function"
   }
 ]

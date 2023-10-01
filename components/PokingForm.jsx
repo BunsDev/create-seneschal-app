@@ -21,26 +21,32 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
+import { useState, useEffect } from 'react';
 import {
-  useSignTypedData,
   useWaitForTransaction,
   useContractWrite,
+  useContractRead,
   useAccount
 } from 'wagmi';
-import { formatEther } from 'viem';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { Loader2, ExternalLink, ImageOff, Gem, RotateCw } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { useQuery, useLazyQuery } from '@apollo/client';
+import {
+  Loader2,
+  ExternalLink,
+  ImageOff,
+  RotateCw,
+  ConciergeBell
+} from 'lucide-react';
+import { formatEther } from 'viem';
 import axios from 'axios';
 
 // file imports
 
-import { GetWitnessedProposals } from '@/graphql/queries';
-import { getAccountString } from '@/lib/helpers';
+import { getAccountString, getArweaveTxId } from '@/lib/helpers';
+import { useQuery, useLazyQuery } from '@apollo/client';
+import { GetProposals } from '@/graphql/queries';
 import { CountdownTimer } from './CountdownTimer';
-import { getTypes } from '@/lib/helpers';
 import {
   EXPLORER_BASE_URL,
   IPFS_BASE_GATEWAY,
@@ -48,22 +54,22 @@ import {
 } from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
-export function RecipientForm() {
+export function PokingForm() {
   const { address } = useAccount();
-  const [commitment, setCommitment] = useState('');
   const [txSuccess, setTxSuccess] = useState(false);
   const [proposals, setProposals] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const { toast } = useToast();
-  const { refetch } = useQuery(GetWitnessedProposals, {
+
+  const { refetch } = useQuery(GetProposals, {
     onCompleted: (data) => decodeHash(data.proposals)
   });
 
   const [
     getProposalRefetch,
     { data: refetchProposalData, loading: refetchLoading }
-  ] = useLazyQuery(GetWitnessedProposals);
+  ] = useLazyQuery(GetProposals);
 
   useEffect(() => {
     if (refetchProposalData) {
@@ -71,20 +77,10 @@ export function RecipientForm() {
     }
   }, [refetchProposalData]);
 
-  const { signTypedData, isLoading: signaturePending } = useSignTypedData({
-    onSuccess(signature) {
-      write({
-        args: [commitment, signature]
-      });
-    },
-    onError(err) {
-      console.log(err);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Function call failed.'
-      });
-    }
+  const { data: claimDelay } = useContractRead({
+    address: SENESCHAL_CONTRACT_ADDRESS,
+    abi: SeneschalAbi,
+    functionName: 'getClaimDelay'
   });
 
   const {
@@ -94,7 +90,7 @@ export function RecipientForm() {
   } = useContractWrite({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
-    functionName: 'claim',
+    functionName: 'poke',
     onSuccess(data) {
       toast({
         title: 'Mining Transaction',
@@ -126,9 +122,8 @@ export function RecipientForm() {
     async onSuccess() {
       toast({
         title: 'Success',
-        description: 'Proposal witnessed.'
+        description: 'Proposal poked.'
       });
-      setCommitment('');
       setTxSuccess(true);
       let data = await refetch();
       decodeHash(data.data.proposals);
@@ -136,7 +131,9 @@ export function RecipientForm() {
   });
 
   const decodeHash = async (_proposals) => {
-    let formattedProposals = _proposals;
+    let formattedProposals = _proposals.filter(
+      (p) => p.status === 'Sponsored' && p.status !== 'Poked'
+    );
 
     for (let i = 0; i < formattedProposals.length; i++) {
       try {
@@ -144,6 +141,7 @@ export function RecipientForm() {
           `${IPFS_BASE_GATEWAY}/${formattedProposals[i].commitmentDetails.metadata}`
         );
 
+        // Update the proposal object with the fetched metadata.
         formattedProposals[i].metadata = data;
       } catch (error) {
         console.log(error);
@@ -153,7 +151,7 @@ export function RecipientForm() {
     setLoading(false);
   };
 
-  const handleClaim = async (_commitment) => {
+  const handlePoke = async (_commitment) => {
     let commitmentArray = [
       Number(_commitment.eligibleHat),
       Number(_commitment.shares),
@@ -168,15 +166,16 @@ export function RecipientForm() {
       _commitment.extraRewardToken
     ];
 
-    setCommitment(commitmentArray);
+    let arweaveResult = await getArweaveTxId(
+      _commitment.contextURL.substring(
+        _commitment.contextURL.lastIndexOf('/') + 1
+      )
+    );
 
-    let { values, domain, types } = await getTypes(commitmentArray);
+    let completionReportTxId = arweaveResult.transactions.edges[0].node.id;
 
-    signTypedData({
-      domain,
-      types,
-      message: values,
-      primaryType: 'Commitment'
+    write({
+      args: [commitmentArray, completionReportTxId]
     });
   };
 
@@ -192,11 +191,12 @@ export function RecipientForm() {
       </Button>
 
       {!loading && !refetchLoading && proposals.length > 0 && (
-        <div className='grid grid-cols-3 gap-10 mt-4'>
+        <div className='grid grid-cols-3 gap-10 mt-12'>
           {proposals.map((proposal, index) => {
-            let isExpired =
-              Number(proposal.commitmentDetails.expirationTime) <
-              Math.round(Date.now() / 1000);
+            let isEarly =
+              Number(claimDelay) +
+                Number(proposal.commitmentDetails.sponsoredTime) >
+              Date.now() / 1000;
 
             let contextURL = proposal.commitmentDetails.contextURL;
             let proposalId = proposal.id;
@@ -206,18 +206,16 @@ export function RecipientForm() {
             let sponsoredTime = new Date(
               Number(proposal.commitmentDetails.sponsoredTime * 1000)
             ).toLocaleString();
-            let witnessedTime = new Date(
-              Number(proposal.witnessingDetails.blockTimestamp) * 1000
+            let timeFactor = new Date(
+              Number(proposal.commitmentDetails.timeFactor) * 1000
             ).toLocaleString();
-            let expiryTime = new Date(
-              Number(proposal.commitmentDetails.expirationTime) * 1000
-            ).toLocaleString();
+
+            let proposalSummary = proposal.metadata.proposalSummary;
             let proposalTitle =
               proposal.metadata.proposalTitle ||
               `SDS #${proposalId
                 .substring(proposalId.length - 4)
                 .toUpperCase()}`;
-            let proposalSummary = proposal.metadata.proposalSummary;
             let commitmentDetails = proposal.commitmentDetails;
 
             return (
@@ -233,10 +231,11 @@ export function RecipientForm() {
                     </div>
 
                     <CountdownTimer
-                      timeFactor={Number(
-                        proposal.commitmentDetails.expirationTime
-                      )}
-                      delay={0}
+                      timeFactor={Number(proposal.commitmentDetails.timeFactor)}
+                      delay={
+                        Number(claimDelay) +
+                        Number(proposal.commitmentDetails.sponsoredTime)
+                      }
                     />
                   </div>
 
@@ -245,7 +244,7 @@ export function RecipientForm() {
                     className='hover:opacity-75 cursor-pointer'
                   >
                     <div className='relative'>
-                      <div className='h-40 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg'>
+                      <div className='h-40 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-white'>
                         {proposalImage ? (
                           <img
                             id='preview_img'
@@ -285,43 +284,35 @@ export function RecipientForm() {
                         >
                           {address.toLowerCase() === recipient.toLowerCase()
                             ? 'You'
-                            : getAccountString(proposal.recipient)}
+                            : getAccountString(recipient)}
                         </p>
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <div className='space-y-1'>
-                      <p className='text-xs text-muted-foreground '>
-                        Sponsored on
-                      </p>
-                      <p className='text-sm font-medium '>{sponsoredTime}</p>
+                  <div className='grid grid-cols-1 '>
+                    <div>
+                      <div className='space-y-1'>
+                        <p className='text-xs text-muted-foreground '>
+                          Sponsored Time
+                        </p>
+                        <p className='text-xs font-medium '>{sponsoredTime}</p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <div className='space-y-1'>
-                      <p className='text-xs text-muted-foreground'>
-                        Witnessed on
-                      </p>
-                      <p className='text-sm font-medium '>{witnessedTime}</p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className='space-y-1'>
-                      <p className='text-xs text-muted-foreground'>
-                        Cannot claim after
-                      </p>
-                      <p className='text-sm font-medium '>{expiryTime}</p>
+                    <div className='mt-4'>
+                      <div className='space-y-1'>
+                        <p className='text-xs text-muted-foreground'>
+                          Cannot be witnessed after
+                        </p>
+                        <p className='text-xs font-medium '>{timeFactor}</p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
 
                 <CardFooter>
                   <AlertDialog
-                    onOpenChange={(e) => {
+                    onOpenChange={async (e) => {
                       if (!e && txSuccess) {
                         setTxSuccess(false);
                       }
@@ -330,53 +321,78 @@ export function RecipientForm() {
                     <AlertDialogTrigger asChild>
                       <Button
                         className='w-full'
-                        variant={isExpired ? 'outline' : 'default'}
+                        variant={
+                          isEarly ||
+                          address.toLowerCase() !== recipient.toLowerCase()
+                            ? 'outline'
+                            : 'default'
+                        }
                         disabled={
-                          isExpired ||
+                          isEarly ||
                           address.toLowerCase() !== recipient.toLowerCase()
                         }
                       >
-                        <Gem className='mr-2 h-4 w-4' />{' '}
+                        <ConciergeBell className='mr-2 h-4 w-4' />
                         {address.toLowerCase() !== recipient.toLowerCase()
-                          ? 'Not a recipient'
-                          : 'View Summary'}
+                          ? 'Cannot Poke'
+                          : 'Poke'}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>{proposalTitle}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {proposalSummary
-                            ? proposalSummary
-                            : 'No proposal summary found.'}
+                          <div>
+                            <p>
+                              {proposalSummary
+                                ? proposalSummary
+                                : 'No proposal summary found.'}
+                            </p>
+                            <div className='flex flex-col mt-4'>
+                              <p className='mb-2 text-sm font-semibold'>
+                                Completion Report
+                              </p>
+                              <div>
+                                <Input
+                                  className='mb-2'
+                                  disabled
+                                  value={contextURL}
+                                />
+                                <p className='text-xs text-muted-foreground mb-4'>
+                                  Make sure to update the proposal article with
+                                  updates before poking.
+                                </p>
+                                <Button
+                                  variant='secondary'
+                                  onClick={() =>
+                                    window.open(contextURL, '_blank')
+                                  }
+                                >
+                                  View proposal
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel
-                          disabled={
-                            signaturePending || writePending || txPending
-                          }
-                        >
+                        <AlertDialogCancel disabled={writePending || txPending}>
                           {!txSuccess ? 'Cancel' : 'Close'}
                         </AlertDialogCancel>
                         {!txSuccess && (
                           <Button
-                            disabled={
-                              signaturePending || writePending || txPending
-                            }
-                            onClick={() => handleClaim(commitmentDetails)}
+                            disabled={writePending || txPending}
+                            onClick={() => {
+                              handlePoke(commitmentDetails);
+                            }}
                           >
-                            {(signaturePending ||
-                              writePending ||
-                              txPending) && (
+                            {(writePending || txPending) && (
                               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                             )}
 
-                            {signaturePending
-                              ? 'Pending signature'
-                              : writePending || txPending
+                            {writePending || txPending
                               ? 'Pending transaction'
-                              : 'Claim'}
+                              : 'Poke'}
                           </Button>
                         )}
                       </AlertDialogFooter>
@@ -398,7 +414,7 @@ export function RecipientForm() {
 
       {!loading && !refetchLoading && proposals.length == 0 && (
         <div className='h-96 flex flex-row items-center justify-center'>
-          <p>No proposals to claim.</p>
+          <p>No proposals to poke.</p>
         </div>
       )}
     </div>

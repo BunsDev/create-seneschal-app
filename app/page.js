@@ -1,126 +1,68 @@
 'use client';
 
+// lib imports
+
 import { ApolloProvider } from '@apollo/client';
-import { Web3Button } from '@web3modal/react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import {
-  useAccount,
-  useContractRead,
-  useNetwork,
-  useSwitchNetwork
-} from 'wagmi';
+import { useRouter } from 'next/navigation';
 
-import { Wallet, Loader2, PenSquare, Stamp, Gem } from 'lucide-react';
+// file imports
 
-import { SponsorForm } from '@/components/SponsorForm';
-import { ProcessorForm } from '@/components/ProcessorForm';
-import { RecipientForm } from '@/components/RecipientForm';
-
-import {
-  AREWEAVE_GRAPHQL_CLIENT,
-  SUBGRAPH_GRAPHQL_CLIENT
-} from '@/graphql/config';
-
-import {
-  HATS_PROTOCOL_CONTRACT_ADDRESS,
-  SPONSOR_HAT_ID,
-  PROCESSOR_HAT_ID
-} from '@/config';
-import HatsAbi from '../abis/Hats.json';
+import { Proposals } from '@/components/Proposals';
+import { SUBGRAPH_GRAPHQL_CLIENT } from '@/graphql/config';
 
 export default function Home() {
-  const { address } = useAccount();
-  const { chain } = useNetwork();
-
-  const {
-    chains,
-    isLoading: switchingNetwork,
-    switchNetwork
-  } = useSwitchNetwork();
-
-  const { data: isSponsor, isLoading: sponsorHatValidating } = useContractRead({
-    address: HATS_PROTOCOL_CONTRACT_ADDRESS,
-    abi: HatsAbi,
-    functionName: 'isWearerOfHat',
-    args: [address, SPONSOR_HAT_ID],
-    enabled: address && chain?.id == chains[0]?.id
-  });
-
-  const { data: isProcessor, isLoading: processorHatValidating } =
-    useContractRead({
-      address: HATS_PROTOCOL_CONTRACT_ADDRESS,
-      abi: HatsAbi,
-      functionName: 'isWearerOfHat',
-      args: [address, PROCESSOR_HAT_ID],
-      enabled: address && chain?.id == chains[0]?.id
-    });
+  const router = useRouter();
 
   return (
-    <main className='flex min-h-screen max-w-7xl flex-col items-center p-24 mx-auto'>
-      <div className='flex flex-row min-w-full justify-between items-center mb-10'>
-        <h2 className='scroll-m-20 border-b pb-2 text-3xl font-semibold tracking-tight transition-colors first:mt-0'>
+    <main className='min-h-screen grid grid-flow-row gap-4 max-w-7xl px-24 pt-12 pb-4 mx-auto'>
+      <div className='flex flex-row min-w-full justify-between items-center'>
+        <h2 className='text-3xl font-semibold tracking-tight transition-colors'>
           The Seneschal
         </h2>
-        <Web3Button />
+        <Button onClick={() => router.push('/seneshal')}>Open app</Button>
       </div>
 
-      {!address ? (
-        <div className=' flex flex-col items-center lg:p-16 p-8 mt-auto mb-auto'>
-          <Wallet />
-          <p className='mt-4 text-sm opacity-50'>
-            Connect your wallet to authenticate.
-          </p>
-        </div>
-      ) : chain?.id != chains[0]?.id ? (
-        <div className=' flex flex-col items-center lg:p-16 p-8 mt-auto mb-auto'>
-          <Button
-            onClick={() => switchNetwork(chains[0]?.id)}
-            disabled={switchingNetwork}
+      <div className='min-h-[750px] border rounded bg-[#fafbfc] p-4'>
+        <p className='py-12 w-3/4 mr-auto text-muted-foreground '>
+          The seneschal shaman enables a high degree of agency for DAO operators
+          to grant shares, loot and rewards to value creating participants. It
+          enables piecemeal task to task incentives for DAO participants. It’s
+          entirely non-coersive; and useful for high-trust organizations.
+        </p>
+
+        <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
+          <Proposals />
+        </ApolloProvider>
+      </div>
+
+      <div className='flex flex-row min-w-full justify-between items-center'>
+        <a
+          href='https://silverdoor.ai'
+          target='_blank'
+          className='scroll-m-20 pb-2 text-xs font-semibold tracking-tight transition-colors first:mt-0 cursor-pointer'
+        >
+          Silverdoor @ 2023
+        </a>
+        <small className='text-xs font-medium leading-none text-muted-foreground'>
+          Built by{' '}
+          <a
+            href='https://twitter.com/KyleSt4rgarden'
+            target='_blank'
+            className='cursor-pointer underline'
           >
-            {switchingNetwork && (
-              <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-            )}
-            {switchingNetwork ? 'Switching to Gnosis..' : 'Switch to Gnosis'}
-          </Button>
-        </div>
-      ) : sponsorHatValidating || processorHatValidating ? (
-        <div className='flex flex-row items-center justify-center'>
-          <Loader2 className='h-4 w-4 animate-spin' />
-          <p className='ml-2 text-muted-foreground'>Validating hats</p>
-        </div>
-      ) : (
-        <Tabs defaultValue='sponsor' className='w-full'>
-          <TabsList className='w-full bg-slate-200 '>
-            <TabsTrigger value='sponsor' className='font-semibold'>
-              <PenSquare className='h-4 w-4 mr-2' /> <p>For Sponsoring</p>
-            </TabsTrigger>
-            <TabsTrigger value='processor' className='font-semibold'>
-              <Stamp className='h-4 w-4 mr-2' /> <p>For Processing</p>
-            </TabsTrigger>
-            <TabsTrigger value='recipient' className='font-semibold'>
-              <Gem className='h-4 w-4 mr-2' /> <p>For Claiming</p>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value='sponsor'>
-            <ApolloProvider client={AREWEAVE_GRAPHQL_CLIENT}>
-              <SponsorForm isSponsor={isSponsor} />
-            </ApolloProvider>
-          </TabsContent>
-
-          <TabsContent value='processor'>
-            <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
-              <ProcessorForm isProcessor={isProcessor} />
-            </ApolloProvider>
-          </TabsContent>
-
-          <TabsContent value='recipient'>
-            <ApolloProvider client={SUBGRAPH_GRAPHQL_CLIENT}>
-              <RecipientForm />
-            </ApolloProvider>
-          </TabsContent>
-        </Tabs>
-      )}
+            Kyle
+          </a>{' '}
+          &{' '}
+          <a
+            href='https://twitter.com/saimano1996'
+            target='_blank'
+            className='cursor-pointer underline'
+          >
+            Saimano
+          </a>
+        </small>
+      </div>
     </main>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
-import { Loader2, ExternalLink, BookOpen } from 'lucide-react';
+// lib imports
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -20,17 +21,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Badge } from '@/components/ui/badge';
-
-import { useToast } from '@/components/ui/use-toast';
-import { ToastAction } from '@/components/ui/toast';
-import { ImageOff } from 'lucide-react';
-import { getAccountString } from '@/lib/helpers';
-
-import { useQuery } from '@apollo/client';
-import { GetSponsoredProposals } from '@/graphql/queries';
-import { useState } from 'react';
-import { useRedis } from '@/hooks/useRedis';
 import {
   useSignTypedData,
   useWaitForTransaction,
@@ -38,32 +28,64 @@ import {
   useContractRead,
   useAccount
 } from 'wagmi';
-
+import { formatEther } from 'viem';
+import { useToast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import { ImageOff, Stamp, Loader2, ExternalLink, RotateCw } from 'lucide-react';
+import { getAccountString } from '@/lib/helpers';
+import { useQuery, useLazyQuery } from '@apollo/client';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 
+// file imports
+
+import { GetProposals } from '@/graphql/queries';
+import { CountdownTimer } from './CountdownTimer';
 import { getTypes } from '@/lib/helpers';
-import { SENESCHAL_CONTRACT_ADDRESS } from '@/config';
+import {
+  EXPLORER_BASE_URL,
+  IPFS_BASE_GATEWAY,
+  SENESCHAL_CONTRACT_ADDRESS
+} from '@/config';
 import SeneschalAbi from '../abis/Seneschal.json';
 
-export function ProcessorForm({ isProcessor }) {
+export function WitnessForm({ isWitness }) {
   const { address } = useAccount();
 
-  const [decoded, setDecoded] = useState({});
   const [commitment, setCommitment] = useState('');
   const [txSuccess, setTxSuccess] = useState(false);
   const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const { toast } = useToast();
-  const { loading, refetch } = useQuery(GetSponsoredProposals, {
-    onCompleted: (data) => setProposals(data.proposals),
-    pollInterval: 270000
+
+  const { refetch } = useQuery(GetProposals, {
+    onCompleted: (data) => decodeHash(data.proposals)
   });
-  const { getMeta } = useRedis();
+
+  const [
+    getProposalRefetch,
+    { data: refetchProposalData, loading: refetchLoading }
+  ] = useLazyQuery(GetProposals);
+
+  useEffect(() => {
+    if (refetchProposalData) {
+      decodeHash(refetchProposalData.proposals);
+    }
+  }, [refetchProposalData]);
 
   const { signTypedData, isLoading: signaturePending } = useSignTypedData({
     onSuccess(signature) {
       write({
         args: [commitment, signature]
+      });
+    },
+    onError(err) {
+      console.log(err);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Function call failed.'
       });
     }
   });
@@ -71,7 +93,7 @@ export function ProcessorForm({ isProcessor }) {
   const { data: claimDelay } = useContractRead({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
-    functionName: 'claimDelay'
+    functionName: 'getClaimDelay'
   });
 
   const {
@@ -81,7 +103,7 @@ export function ProcessorForm({ isProcessor }) {
   } = useContractWrite({
     address: SENESCHAL_CONTRACT_ADDRESS,
     abi: SeneschalAbi,
-    functionName: 'process',
+    functionName: 'witness',
     onSuccess(data) {
       toast({
         title: 'Mining Transaction',
@@ -90,7 +112,7 @@ export function ProcessorForm({ isProcessor }) {
           <ToastAction
             altText='View Tx'
             onClick={() =>
-              window.open(`https://gnosisscan.io/tx/${data.hash}`, '_blank')
+              window.open(`${EXPLORER_BASE_URL}/tx/${data.hash}`, '_blank')
             }
           >
             View Tx
@@ -113,50 +135,47 @@ export function ProcessorForm({ isProcessor }) {
     async onSuccess() {
       toast({
         title: 'Success',
-        description: 'Proposal processed.'
+        description: 'Proposal witnessed.'
       });
       setCommitment('');
       setTxSuccess(true);
       let data = await refetch();
-      setProposals(data.data.proposals);
+      decodeHash(data.data.proposals);
     }
   });
 
-  const decodeHash = async (proposal) => {
-    let ipfsHash = await getMeta(proposal.id);
-    if (ipfsHash) {
-      let { data } = await axios.get(
-        `https://seneschal-silverdoor.infura-ipfs.io/ipfs/${ipfsHash}`
-      );
+  const decodeHash = async (_proposals) => {
+    let formattedProposals = _proposals.filter(
+      (p) => p.status === 'Sponsored' || p.status === 'Poked'
+    );
 
-      setDecoded((prevDecoded) => ({
-        ...prevDecoded,
-        [proposal.id]: {
-          meta: data,
-          commitment: proposal.commitmentDetails
-        }
-      }));
-    } else {
-      setDecoded((prevDecoded) => ({
-        ...prevDecoded,
-        [proposal.id]: {
-          meta: null,
-          commitment: proposal.commitmentDetails
-        }
-      }));
+    for (let i = 0; i < formattedProposals.length; i++) {
+      try {
+        let { data } = await axios.get(
+          `${IPFS_BASE_GATEWAY}/${formattedProposals[i].commitmentDetails.metadata}`
+        );
+
+        // Update the proposal object with the fetched metadata.
+        formattedProposals[i].metadata = data;
+      } catch (error) {
+        console.log(error);
+      }
     }
+    setProposals(formattedProposals);
+    setLoading(false);
   };
 
-  const handleProcess = async (_commitment) => {
+  const handleWitness = async (_commitment) => {
     let commitmentArray = [
       Number(_commitment.eligibleHat),
       Number(_commitment.shares),
-      Number(_commitment.loot),
+      _commitment.loot,
       Number(_commitment.extraRewardAmount),
       Number(_commitment.timeFactor),
       Number(_commitment.sponsoredTime),
       Number(_commitment.expirationTime),
       _commitment.contextURL,
+      _commitment.metadata,
       _commitment.recipient,
       _commitment.extraRewardToken
     ];
@@ -175,70 +194,86 @@ export function ProcessorForm({ isProcessor }) {
 
   return (
     <div>
-      {!loading && proposals.length > 0 && (
+      <Button
+        className='mt-2'
+        variant='outline'
+        disabled={refetchLoading || loading}
+        onClick={() => getProposalRefetch()}
+      >
+        <RotateCw className='mr-2 h-4 w-4' /> Refresh
+      </Button>
+
+      {!loading && !refetchLoading && proposals.length > 0 && (
         <div className='grid grid-cols-3 gap-10 mt-12'>
           {proposals.map((proposal, index) => {
             let isEarly =
               Number(claimDelay) +
                 Number(proposal.commitmentDetails.sponsoredTime) >
               Date.now() / 1000;
+
+            let proposalStatus = proposal.status;
+
             let contextURL = proposal.commitmentDetails.contextURL;
             let proposalId = proposal.id;
-            let proposalImage =
-              decoded[proposalId]?.['meta']?.['proposalImage'];
-            let loot = proposal.commitmentDetails.loot;
+            let proposalImage = proposal.metadata.proposalImage;
+            let loot = formatEther(proposal.commitmentDetails.loot);
             let recipient = proposal.recipient;
             let sponsoredTime = new Date(
               Number(proposal.commitmentDetails.sponsoredTime * 1000)
-            ).toDateString();
-            let expiryTime = new Date(
-              Number(proposal.commitmentDetails.expirationTime) * 1000
-            ).toDateString();
-            let proposalSummary =
-              decoded[proposalId]?.['meta']?.['proposalSummary'];
+            ).toLocaleString();
+            let timeFactor = new Date(
+              Number(proposal.commitmentDetails.timeFactor) * 1000
+            ).toLocaleString();
+
+            let proposalSummary = proposal.metadata.proposalSummary;
+            let proposalTitle =
+              proposal.metadata.proposalTitle ||
+              `SDS #${proposalId
+                .substring(proposalId.length - 4)
+                .toUpperCase()}`;
             let commitmentDetails = proposal.commitmentDetails;
 
             return (
               <Card key={index}>
                 <CardHeader>
                   <div
-                    className='flex flex-row items-center cursor-pointer hover:underline mb-2'
+                    className='flex flex-row items-center justify-between mb-2'
                     onClick={() => window.open(contextURL, '_blank')}
                   >
-                    <CardTitle className='mr-2'>{`SDS #${proposalId
-                      .substring(proposalId.length - 4)
-                      .toUpperCase()}`}</CardTitle>
-                    <ExternalLink className='w-4 h-4' />
+                    <div className='flex flex-row items-center cursor-pointer underline '>
+                      <CardTitle className='mr-2'>{proposalTitle}</CardTitle>
+                      <ExternalLink className='w-4 h-4' />
+                    </div>
+
+                    <CountdownTimer
+                      timeFactor={Number(proposal.commitmentDetails.timeFactor)}
+                      delay={
+                        Number(claimDelay) +
+                        Number(proposal.commitmentDetails.sponsoredTime)
+                      }
+                    />
                   </div>
 
-                  <Badge
-                    variant='outline'
-                    className={`w-fit rounded-sm text-white ${
-                      isEarly ? 'bg-yellow-500' : 'bg-green-500'
-                    }`}
+                  <CardDescription
+                    onClick={() => window.open(contextURL, '_blank')}
+                    className='hover:opacity-75 cursor-pointer'
                   >
-                    {isEarly ? 'Too early to process' : 'Ready to process'}
-                  </Badge>
-
-                  <CardDescription>
                     <div className='relative'>
-                      <div className='h-32 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-white'>
-                        {!(proposalId in decoded) && (
+                      <div className='h-40 mt-4 flex flex-col items-center justify-center border-2 border-gray-300 border-dashed rounded-lg bg-white'>
+                        {proposalStatus === 'Poked' && (
                           <Button
-                            variant='outline'
-                            disabled={!isProcessor}
-                            className='right-0 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2'
-                            onClick={() => decodeHash(proposal)}
+                            disabled
+                            className='right-0 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white text-black w-fit text-base'
                           >
-                            Decode Hash
+                            Poked
                           </Button>
                         )}
 
-                        {!(proposalId in decoded) ? null : proposalImage ? (
+                        {proposalImage ? (
                           <img
                             id='preview_img'
-                            className='h-32 w-full object-cover'
-                            src={`https://seneschal-silverdoor.infura-ipfs.io/ipfs/${proposalImage}`}
+                            className='h-40 w-full object-cover'
+                            src={`${IPFS_BASE_GATEWAY}/${proposalImage}`}
                           />
                         ) : (
                           <ImageOff className='h-16 w-16 ' />
@@ -266,7 +301,7 @@ export function ProcessorForm({ isProcessor }) {
                           className='text-sm font-medium cursor-pointer underline hover:opacity-95'
                           onClick={() =>
                             window.open(
-                              `https://gnosisscan.io/address/${recipient}`,
+                              `${EXPLORER_BASE_URL}/address/${recipient}`,
                               '_blank'
                             )
                           }
@@ -278,22 +313,22 @@ export function ProcessorForm({ isProcessor }) {
                       </div>
                     </div>
                   </div>
-                  <div className='grid grid-cols-2 '>
+                  <div className='grid grid-cols-1 '>
                     <div>
                       <div className='space-y-1'>
                         <p className='text-xs text-muted-foreground '>
                           Sponsored Time
                         </p>
-                        <p className='text-sm font-medium '>{sponsoredTime}</p>
+                        <p className='text-xs font-medium '>{sponsoredTime}</p>
                       </div>
                     </div>
 
-                    <div>
+                    <div className='mt-4'>
                       <div className='space-y-1'>
                         <p className='text-xs text-muted-foreground'>
-                          Expires On
+                          Cannot be witnessed after
                         </p>
-                        <p className='text-sm font-medium '>{expiryTime}</p>
+                        <p className='text-xs font-medium '>{timeFactor}</p>
                       </div>
                     </div>
                   </div>
@@ -304,7 +339,6 @@ export function ProcessorForm({ isProcessor }) {
                     onOpenChange={async (e) => {
                       if (!e && txSuccess) {
                         setTxSuccess(false);
-                        setDecoded({});
                       }
                     }}
                   >
@@ -312,19 +346,15 @@ export function ProcessorForm({ isProcessor }) {
                       <Button
                         className='w-full'
                         variant={isEarly ? 'outline' : 'default'}
-                        disabled={!(proposalId in decoded) || isEarly}
+                        disabled={isEarly}
                       >
-                        <BookOpen className='mr-2 h-4 w-4' />
-                        View Summary
+                        <Stamp className='mr-2 h-4 w-4' />
+                        Verify
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          {`SDS #${proposalId
-                            .substring(proposalId.length - 4)
-                            .toUpperCase()}`}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>{proposalTitle}</AlertDialogTitle>
                         <AlertDialogDescription>
                           {proposalSummary
                             ? proposalSummary
@@ -337,15 +367,18 @@ export function ProcessorForm({ isProcessor }) {
                             signaturePending || writePending || txPending
                           }
                         >
-                          {!txSuccess && decoded ? 'Cancel' : 'Close'}
+                          {!txSuccess ? 'Cancel' : 'Close'}
                         </AlertDialogCancel>
-                        {!txSuccess && decoded && (
+                        {!txSuccess && (
                           <Button
                             disabled={
-                              signaturePending || writePending || txPending
+                              signaturePending ||
+                              writePending ||
+                              txPending ||
+                              !isWitness
                             }
                             onClick={() => {
-                              handleProcess(commitmentDetails);
+                              handleWitness(commitmentDetails);
                             }}
                           >
                             {(signaturePending ||
@@ -354,11 +387,13 @@ export function ProcessorForm({ isProcessor }) {
                               <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                             )}
 
-                            {signaturePending
+                            {!isWitness
+                              ? 'Not a witness'
+                              : signaturePending
                               ? 'Pending signature'
                               : writePending || txPending
                               ? 'Pending transaction'
-                              : 'Process'}
+                              : 'Verify'}
                           </Button>
                         )}
                       </AlertDialogFooter>
@@ -371,16 +406,16 @@ export function ProcessorForm({ isProcessor }) {
         </div>
       )}
 
-      {!loading && proposals.length == 0 && (
+      {(loading || refetchLoading || !proposals) && (
         <div className='h-96 flex flex-row items-center justify-center'>
-          <p className='ml-2 text-muted-foreground'>No proposals to process.</p>
+          <Loader2 className='mr-2 h-4 w-4 animate-spin' />
+          <p>Fetching proposals. Please wait</p>
         </div>
       )}
 
-      {(loading || !proposals) && (
+      {!loading && !refetchLoading && proposals.length == 0 && (
         <div className='h-96 flex flex-row items-center justify-center'>
-          <Loader2 className='h-4 w-4 animate-spin' />
-          <p className='ml-2 text-muted-foreground'>Fetching proposals..</p>
+          <p>No proposals to witness.</p>
         </div>
       )}
     </div>
