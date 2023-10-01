@@ -51,7 +51,7 @@ export default function Home() {
             target='_blank'
             className='cursor-pointer underline'
           >
-            Kyle
+            st4rgard3n
           </a>{' '}
           &{' '}
           <a
@@ -59,7 +59,7 @@ export default function Home() {
             target='_blank'
             className='cursor-pointer underline'
           >
-            Saimano
+            saimano
           </a>
         </small>
       </div>

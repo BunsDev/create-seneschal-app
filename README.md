@@ -1,6 +1,5 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/) ![npm](https://img.shields.io/npm/v/create-seneschal-app)
 
-
 # The Seneschal
 
 ![The Seneschal Logo](https://res.cloudinary.com/saimano/image/upload/v1696143767/seneschal/screenshot.png)
@@ -36,7 +35,7 @@ You can find the necessary environment variables in the `sample.env` file. Make 
 - Requires a subgraph to your deployed seneschal contract which you can clone [here](https://github.com/manolingam/seneschal-subgraph/). Make sure to update the contract address at `subgraph.yaml`.
 - Using [nft.storage](https://nft.storage/) as the IPFS provider. You can either use the same or bring your own provider. Note that, if the provider is changed, you need to make appropriate code changes as well for interacting with IPFS.
 
-Once you have your instance up and running, you can start customizing it to suit your needs. 
+Once you have your instance up and running, you can start customizing it to suit your needs.
 
 ## Technologies Used
 
@@ -55,8 +54,8 @@ Once you have your instance up and running, you can start customizing it to suit
 
 ## Authors
 
-- Contracts built by [Kyle](https://twitter.com/KyleSt4rgarden)
-- Subgraph and Dapp by [Saimano](https://twitter.com/saimano1996)
+- Contracts built by [st4rgard3n](https://twitter.com/KyleSt4rgarden)
+- Subgraph and Dapp by [saimano](https://twitter.com/saimano1996)
 
 ## Contribution
 
@@ -70,5 +69,4 @@ We welcome contributions from the community to enhance and improve **The Senesch
 
 ---
 
-*Copyright © 2023 [SilverDoor](https://silverdoor.ai). This project is licensed under the [MIT License](LICENSE).*
-
+_Copyright © 2023 [SilverDoor](https://silverdoor.ai). This project is licensed under the [MIT License](LICENSE)._
