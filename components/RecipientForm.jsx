@@ -1,5 +1,7 @@
 'use client';
 
+// lib imports
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,25 +21,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { formatEther } from 'viem';
-import { useToast } from '@/components/ui/use-toast';
-import { ToastAction } from '@/components/ui/toast';
-import { Loader2, ExternalLink, ImageOff, Gem, RotateCw } from 'lucide-react';
-import { getAccountString } from '@/lib/helpers';
-
-import { useQuery, useLazyQuery } from '@apollo/client';
-import { GetWitnessedProposals } from '@/graphql/queries';
-import { useState, useEffect } from 'react';
-
 import {
   useSignTypedData,
   useWaitForTransaction,
   useContractWrite,
   useAccount
 } from 'wagmi';
-
+import { formatEther } from 'viem';
+import { useToast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import { Loader2, ExternalLink, ImageOff, Gem, RotateCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useQuery, useLazyQuery } from '@apollo/client';
 import axios from 'axios';
 
+// file imports
+
+import { GetWitnessedProposals } from '@/graphql/queries';
+import { getAccountString } from '@/lib/helpers';
 import { CountdownTimer } from './CountdownTimer';
 import { getTypes } from '@/lib/helpers';
 import {

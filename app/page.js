@@ -1,13 +1,14 @@
 'use client';
 
+// lib imports
+
 import { ApolloProvider } from '@apollo/client';
-
 import { Button } from '@/components/ui/button';
-
 import { useRouter } from 'next/navigation';
 
-import { Proposals } from '@/components/Proposals';
+// file imports
 
+import { Proposals } from '@/components/Proposals';
 import { SUBGRAPH_GRAPHQL_CLIENT } from '@/graphql/config';
 
 export default function Home() {

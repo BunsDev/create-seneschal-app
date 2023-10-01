@@ -1,18 +1,19 @@
 'use client';
 
-import { ApolloProvider } from '@apollo/client';
-import { Web3Button } from '@web3modal/react';
+// lib imports
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { ApolloProvider } from '@apollo/client';
+import { useState } from 'react';
+import { Web3Button } from '@web3modal/react';
+import { useRouter } from 'next/navigation';
 import {
   useAccount,
   useContractRead,
   useNetwork,
   useSwitchNetwork
 } from 'wagmi';
-
-import { useRouter } from 'next/navigation';
-
 import {
   Wallet,
   Loader2,
@@ -22,24 +23,22 @@ import {
   ConciergeBell
 } from 'lucide-react';
 
+// file imports
+
 import { SponsorForm } from '@/components/SponsorForm';
 import { WitnessForm } from '@/components/WitnessForm';
 import { PokingForm } from '@/components/PokingForm';
 import { RecipientForm } from '@/components/RecipientForm';
-
 import {
   AREWEAVE_GRAPHQL_CLIENT,
   SUBGRAPH_GRAPHQL_CLIENT
 } from '@/graphql/config';
-
 import {
   HATS_PROTOCOL_CONTRACT_ADDRESS,
   SPONSOR_HAT_ID,
   WITNESS_HAT_ID
 } from '@/config';
 import HatsAbi from '../../abis/Hats.json';
-
-import { useState } from 'react';
 
 export default function Home() {
   const { address } = useAccount();

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+// lib imports
 
+import { useEffect, useState } from 'react';
 import {
   Form,
   FormControl,
@@ -24,7 +25,6 @@ import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { ToastAction } from '@/components/ui/toast';
 import { Image, Loader2, CalendarIcon, PenSquare } from 'lucide-react';
-
 import { isAddress } from 'viem';
 import {
   useContractWrite,
@@ -35,15 +35,14 @@ import {
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
-
 import * as z from 'zod';
+
+// file imports
 
 import { useProposal } from '@/hooks/useProposal';
 import { useIpfs } from '@/hooks/useIpfs';
-
 import { formatCommitment, getTypes } from '@/lib/helpers';
 import { EXPLORER_BASE_URL, SENESCHAL_CONTRACT_ADDRESS } from '@/config';
-
 import SeneschalAbi from '../abis/Seneschal.json';
 
 const formSchema = z.object({

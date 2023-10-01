@@ -1,12 +1,13 @@
 'use client';
 
+// lib imports
+
 import {
   flexRender,
   getCoreRowModel,
   useReactTable,
   getPaginationRowModel
 } from '@tanstack/react-table';
-
 import {
   Table,
   TableBody,
@@ -15,11 +16,6 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-
-import { MoreHorizontal, ExternalLink } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,15 +24,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-
+import { MoreHorizontal, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { formatEther } from 'viem';
-
 import { useQuery } from '@apollo/client';
-
-import { GetProposals } from '@/graphql/queries';
-
 import { useState } from 'react';
 
+// file imports
+
+import { GetProposals } from '@/graphql/queries';
 import { getAccountString } from '@/lib/helpers';
 import { EXPLORER_BASE_URL, IPFS_BASE_GATEWAY } from '@/config';
 

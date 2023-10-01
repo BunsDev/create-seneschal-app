@@ -1,5 +1,7 @@
 'use client';
 
+// lib imports
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -19,15 +21,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { ConciergeBell } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { ToastAction } from '@/components/ui/toast';
-import { Loader2, ExternalLink, ImageOff, RotateCw } from 'lucide-react';
-import { getAccountString, getArweaveTxId } from '@/lib/helpers';
-
-import { useQuery, useLazyQuery } from '@apollo/client';
-import { GetProposals } from '@/graphql/queries';
 import { useState, useEffect } from 'react';
 import {
   useWaitForTransaction,
@@ -35,9 +28,24 @@ import {
   useContractRead,
   useAccount
 } from 'wagmi';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import {
+  Loader2,
+  ExternalLink,
+  ImageOff,
+  RotateCw,
+  ConciergeBell
+} from 'lucide-react';
 import { formatEther } from 'viem';
 import axios from 'axios';
 
+// file imports
+
+import { getAccountString, getArweaveTxId } from '@/lib/helpers';
+import { useQuery, useLazyQuery } from '@apollo/client';
+import { GetProposals } from '@/graphql/queries';
 import { CountdownTimer } from './CountdownTimer';
 import {
   EXPLORER_BASE_URL,
@@ -56,7 +64,6 @@ export function PokingForm() {
 
   const { refetch } = useQuery(GetProposals, {
     onCompleted: (data) => decodeHash(data.proposals)
-    // pollInterval: 270000
   });
 
   const [

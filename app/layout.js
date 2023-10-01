@@ -2,7 +2,6 @@
 
 import './globals.css';
 import { Inter } from 'next/font/google';
-
 import {
   EthereumClient,
   w3mConnectors,
@@ -12,9 +11,10 @@ import { Toaster } from '@/components/ui/toaster';
 import { Web3Modal } from '@web3modal/react';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import { gnosis } from 'wagmi/chains';
+import { WALLETCONNECT_PROJECT_ID } from '@/config';
 
 const chains = [gnosis];
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+const projectId = WALLETCONNECT_PROJECT_ID;
 
 const { publicClient } = configureChains(chains, [w3mProvider({ projectId })]);
 const wagmiConfig = createConfig({
