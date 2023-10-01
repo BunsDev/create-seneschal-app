@@ -7,9 +7,16 @@
 
 **The Seneschal** is a powerful tool that empowers DAO operators to grant shares, loot, and rewards to value-creating participants. This tool enables the creation of piecemeal task-to-task incentives within DAOs, all while maintaining a non-coercive and high-trust environment. It's designed to enhance the functionality and flexibility of decentralized autonomous organizations.
 
+**Key Features:**
+
+- Grant shares, loot, and rewards within your DAO.
+- Create piecemeal task-to-task incentives for participants.
+- Enhance trust and transparency in your organization.
+- Built using modern technologies like Next.js, Hats Protocol, Arweave and more.
+
 ## Getting Started
 
-This starter kit is built using [Next.js](https://nextjs.org/), [Shadcn/UI](https://ui.shadcn.com/), GraphQL, OpenAI, IPFS (using [nft.storage](https://nft.storage/) as the provider), [Hats Protocol](https://www.hatsprotocol.xyz/), [Subgraph](https://thegraph.com/), [Wagmi](https://wagmi.sh/), [Viem](https://viem.sh/), [Ethers](https://docs.ethers.org/v5/), and [Zod.js](https://github.com/colinhacks/zod).
+This starter kit is built using [Next.js](https://nextjs.org/), [Shadcn/UI](https://ui.shadcn.com/), GraphQL, OpenAI, Arweave, IPFS (using [nft.storage](https://nft.storage/) as the provider), [Hats Protocol](https://www.hatsprotocol.xyz/), [Subgraph](https://thegraph.com/), [Wagmi](https://wagmi.sh/), [Viem](https://viem.sh/), [Ethers](https://docs.ethers.org/v5/), and [Zod.js](https://github.com/colinhacks/zod).
 
 ### Installation
 
@@ -37,6 +44,7 @@ Once you have your instance up and running, you can start customizing it to suit
 - Tailwind CSS
 - GraphQL
 - OpenAI
+- Arweave
 - IPFS (nft.storage as the provider)
 - Hats Protocol
 - Subgraph
