@@ -1,4 +1,5 @@
 import { NFTStorage } from 'nft.storage';
+import { BigNumber } from 'ethers';
 
 export const NFT_STORAGE = new NFTStorage({
   token: process.env.NEXT_PUBLIC_NFT_STORAGE_KEY
@@ -7,9 +8,13 @@ export const NFT_STORAGE = new NFTStorage({
 export const WALLETCONNECT_PROJECT_ID =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
-export const SPONSOR_HAT_ID = process.env.NEXT_PUBLIC_SPONSOR_HAT_ID;
+export const SPONSOR_HAT_ID = BigNumber.from(
+  process.env.NEXT_PUBLIC_SPONSOR_HAT_ID
+);
 
-export const WITNESS_HAT_ID = process.env.NEXT_PUBLIC_WITNESS_HAT_ID;
+export const WITNESS_HAT_ID = BigNumber.from(
+  process.env.NEXT_PUBLIC_WITNESS_HAT_ID
+);
 
 export const SENESCHAL_CONTRACT_ADDRESS =
   process.env.NEXT_PUBIC_SENESCHAL_CONTRACT_ADDRESS;
