@@ -25,15 +25,17 @@ To create your own instance of **The Seneschal**, you can use the following comm
 npx create-seneschal-app --name <project-name>
 ```
 
-## Environment Variables
+## Prerequisites
 
-You can find the necessary environment variables in the `sample.env` file. Make sure to configure them to suit your specific setup.
-
-## Usage
-
-- Once you have the contracts deployed, make sure to set up your environment variables by copying the sample environment file provided: `sample.env`.
+- Requires the seneschal contracts to be deployed. Can be found here in this [repository](https://github.com/St4rgarden/kazoku).
 - Requires a subgraph to your deployed seneschal contract which you can clone [here](https://github.com/manolingam/seneschal-subgraph/). Make sure to update the contract address at `subgraph.yaml`.
+
+## Instructions
+
+- Once you have the contracts & subgraph deployed, create a **Shaman Proposal** in [DAOHaus](https://admin.daohaus.club/#/) to grant DAO permissions to the seneschal contract.
+- Mint the necessary hats to your DAO operators & grab the hat IDs from [here](https://app.hatsprotocol.xyz/).
 - Using [nft.storage](https://nft.storage/) as the IPFS provider. You can either use the same or bring your own provider. Note that, if the provider is changed, you need to make appropriate code changes as well for interacting with IPFS.
+- Update your environment variables by copying the sample environment file provided: `sample.env`.
 
 Once you have your instance up and running, you can start customizing it to suit your needs.
 
