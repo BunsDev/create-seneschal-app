@@ -27,7 +27,7 @@ npx create-seneschal-app --name <project-name>
 
 ## Prerequisites
 
-- Requires the seneschal contracts to be deployed. Can be found here in this [repository](https://github.com/St4rgarden/kazoku).
+- Requires the seneschal contracts to be deployed. Can be found here in this [repository](https://github.com/silverdoor-ai/kazoku).
 - Requires a subgraph to your deployed seneschal contract which you can clone [here](https://github.com/manolingam/seneschal-subgraph/). Make sure to update the contract address at `subgraph.yaml`.
 
 ## Instructions
